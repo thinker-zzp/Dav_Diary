@@ -1,10 +1,10 @@
-# 📔Kidary
+# 📔Kidiary
 
 [![License](https://camo.githubusercontent.com/44e26a8116bb6f791a2574a317f5eb2c75555a92f954123353f990fbee1f28ef/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f4c6963656e73652d417061636865253230322e302d7265642e737667)](https://github.com/briltec/flutter_Pokedex/blob/master/LICENSE) [![License](https://camo.githubusercontent.com/2b0f0abcb5a51eb4cc8321bd5a5e6eb16390950eaee6f9d4f2243af2facbe483/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f4c6963656e73652d4d49542d7265642e737667)](https://github.com/briltec/flutter_Pokedex/blob/master/LICENSE)
 
 ### 基于 Flutter 的智能增量同步日记应用
 
-**Kidary** 是一款兼顾“隐私主权”与“极致书写”的日记应用。我们相信数据应归用户所有，通过 **WebDAV** 协议实现无缝的增量备份，配合 **Material 3** 的灵动设计，为你提供最纯粹的记录空间。
+**Kidiary** 是一款兼顾“隐私主权”与“极致书写”的日记应用。我们相信数据应归用户所有，通过 **WebDAV** 协议实现无缝的增量备份，配合 **Material 3** 的灵动设计，为你提供最纯粹的记录空间。
 
 <div style="text-align: center;">
   <div style="display: inline-flex; gap: 20px;">
