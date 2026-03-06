@@ -1,7 +1,8 @@
-import 'package:diary/data/models/diary_entry.dart';
+﻿import 'package:diary/data/models/diary_entry.dart';
 import 'package:diary/data/models/webdav_config.dart';
 import 'package:diary/data/repositories/diary_repository.dart';
 import 'package:diary/data/repositories/settings_repository.dart';
+import 'package:diary/services/storage_service.dart';
 import 'package:diary/services/sync_service.dart';
 import 'package:flutter/material.dart';
 
@@ -10,13 +11,16 @@ class DiaryAppState extends ChangeNotifier {
     required DiaryRepository diaryRepository,
     required SettingsRepository settingsRepository,
     required SyncService syncService,
+    required StorageService storageService,
   }) : _diaryRepository = diaryRepository,
        _settingsRepository = settingsRepository,
-       _syncService = syncService;
+       _syncService = syncService,
+       _storageService = storageService;
 
   final DiaryRepository _diaryRepository;
   final SettingsRepository _settingsRepository;
   final SyncService _syncService;
+  final StorageService _storageService;
 
   bool _loading = true;
   bool _syncing = false;
@@ -37,6 +41,17 @@ class DiaryAppState extends ChangeNotifier {
     _webDavConfig = await _settingsRepository.loadWebDavConfig();
     _lastSyncAt = await _settingsRepository.loadLastSyncAt();
     await refreshEntries();
+
+    if (_webDavConfig.isConfigured) {
+      _syncing = true;
+      notifyListeners();
+      await _syncService.syncNow();
+      _lastSyncAt = await _settingsRepository.loadLastSyncAt();
+      _syncing = false;
+      await refreshEntries();
+    }
+
+    await _storageService.cleanupOrphanedMedia(_entries);
     _loading = false;
     notifyListeners();
   }
@@ -99,6 +114,7 @@ class DiaryAppState extends ChangeNotifier {
     _lastSyncAt = await _settingsRepository.loadLastSyncAt();
     _syncing = false;
     await refreshEntries();
+    await _storageService.cleanupOrphanedMedia(_entries);
     return result;
   }
 }

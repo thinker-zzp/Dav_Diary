@@ -170,7 +170,7 @@ class _EditorPageState extends State<EditorPage> {
       return;
     }
     setState(() {
-      _attachments = [..._attachments, DiaryAttachment(path: path, isDoodle: true)];
+      _attachments = [..._attachments, DiaryAttachment(path: path, type: AttachmentType.doodle)];
     });
     modalSetState?.call(() {});
   }
@@ -207,11 +207,7 @@ class _EditorPageState extends State<EditorPage> {
     }
     setState(() {
       final list = List<DiaryAttachment>.from(_attachments);
-      list[index] = DiaryAttachment(
-        path: current.path,
-        isDoodle: current.isDoodle,
-        caption: result,
-      );
+      list[index] = current.copyWith(caption: result);
       _attachments = list;
     });
     modalSetState?.call(() {});
@@ -893,3 +889,5 @@ class _EditorPageState extends State<EditorPage> {
     );
   }
 }
+
+

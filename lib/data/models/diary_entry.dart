@@ -1,28 +1,93 @@
-import 'dart:convert';
+﻿import 'dart:convert';
+import 'package:path/path.dart' as p;
+
+enum AttachmentType { image, gif, video, doodle, file }
 
 class DiaryAttachment {
   const DiaryAttachment({
     required this.path,
     this.caption = '',
-    this.isDoodle = false,
+    this.type = AttachmentType.image,
   });
 
   final String path;
   final String caption;
-  final bool isDoodle;
+  final AttachmentType type;
+
+  bool get isDoodle => type == AttachmentType.doodle;
+  bool get isVisualImage =>
+      type == AttachmentType.image ||
+      type == AttachmentType.gif ||
+      type == AttachmentType.doodle;
+  bool get isVideo => type == AttachmentType.video;
+
+  DiaryAttachment copyWith({
+    String? path,
+    String? caption,
+    AttachmentType? type,
+  }) {
+    return DiaryAttachment(
+      path: path ?? this.path,
+      caption: caption ?? this.caption,
+      type: type ?? this.type,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'path': path,
     'caption': caption,
-    'isDoodle': isDoodle,
+    'type': type.name,
   };
 
   static DiaryAttachment fromJson(Map<String, dynamic> json) {
+    final rawType = (json['type'] ?? '') as String;
+    final isLegacyDoodle = (json['isDoodle'] ?? false) as bool;
+    final attachmentPath = (json['path'] ?? '') as String;
+
+    AttachmentType parsedType;
+    if (isLegacyDoodle) {
+      parsedType = AttachmentType.doodle;
+    } else {
+      parsedType = AttachmentType.values.firstWhere(
+        (item) => item.name == rawType,
+        orElse: () => inferTypeFromPath(attachmentPath),
+      );
+    }
+
     return DiaryAttachment(
-      path: (json['path'] ?? '') as String,
+      path: attachmentPath,
       caption: (json['caption'] ?? '') as String,
-      isDoodle: (json['isDoodle'] ?? false) as bool,
+      type: parsedType,
     );
+  }
+
+  static AttachmentType inferTypeFromPath(String path) {
+    final ext = p.extension(path).toLowerCase();
+    if (ext == '.gif') {
+      return AttachmentType.gif;
+    }
+    if (const [
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.webp',
+      '.bmp',
+      '.heic',
+    ].contains(ext)) {
+      return AttachmentType.image;
+    }
+    if (const [
+      '.mp4',
+      '.mov',
+      '.avi',
+      '.mkv',
+      '.webm',
+      '.3gp',
+      '.m4v',
+    ].contains(ext)) {
+      return AttachmentType.video;
+    }
+    return AttachmentType.file;
   }
 }
 
@@ -95,7 +160,7 @@ class DiaryEntry {
 
   String? get firstImagePath {
     for (final attachment in attachments) {
-      if (!attachment.isDoodle) {
+      if (attachment.isVisualImage) {
         return attachment.path;
       }
     }

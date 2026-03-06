@@ -1,7 +1,8 @@
-import 'package:diary/app/app_state.dart';
+﻿import 'package:diary/app/app_state.dart';
 import 'package:diary/data/database/app_database.dart';
 import 'package:diary/data/repositories/diary_repository.dart';
 import 'package:diary/data/repositories/settings_repository.dart';
+import 'package:diary/services/storage_service.dart';
 import 'package:diary/services/sync_service.dart';
 import 'package:diary/ui/home/home_shell.dart';
 import 'package:flutter/material.dart';
@@ -26,10 +27,12 @@ class _DiaryAppBootstrapState extends State<DiaryAppBootstrap> {
     final diaryRepository = DiaryRepository(AppDatabase.instance);
     final settingsRepository = SettingsRepository();
     final syncService = SyncService(diaryRepository, settingsRepository);
+    final storageService = const StorageService();
     _appState = DiaryAppState(
       diaryRepository: diaryRepository,
       settingsRepository: settingsRepository,
       syncService: syncService,
+      storageService: storageService,
     );
     _initFuture = _appState.initialize();
   }
