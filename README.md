@@ -1,14 +1,23 @@
 # 📔 Diary - 云迹
 
+[![License](https://camo.githubusercontent.com/44e26a8116bb6f791a2574a317f5eb2c75555a92f954123353f990fbee1f28ef/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f4c6963656e73652d417061636865253230322e302d7265642e737667)](https://github.com/briltec/flutter_Pokedex/blob/master/LICENSE) [![License](https://camo.githubusercontent.com/2b0f0abcb5a51eb4cc8321bd5a5e6eb16390950eaee6f9d4f2243af2facbe483/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f4c6963656e73652d4d49542d7265642e737667)](https://github.com/briltec/flutter_Pokedex/blob/master/LICENSE)
+
 ### 基于 Flutter 的智能增量同步日记应用
 
 **云迹** 是一款兼顾“隐私主权”与“极致书写”的日记应用。我们相信数据应归用户所有，通过 **WebDAV** 协议实现无缝的增量备份，配合 **Material 3** 的灵动设计，为你提供最纯粹的记录空间。
 
-------
+## ☁️使用教程
+
+以[坚果云](https://www.jianguoyun.com/#/)为例子,官方提供每月1Gb的上传流量,3Gb的下载流量,无限空间
+
+且下载不限速
+
+1. [生成应用授权密码](https://help.jianguoyun.com/?p=2064)
+2. 然后回到APP设置中WebDAV配置即可
 
 ## ✨ 核心特性
 
-### 🖋️ 沉浸式创作中心 (Powered by Quill)
+###🖋️ 沉浸式创作中心 (Powered by Quill)
 
 不仅是文字，更是生活的全维度还原：
 
@@ -16,13 +25,13 @@
 - **多媒体融合：** 无缝嵌入高清图片，内置**矢量手绘涂鸦**组件，记录灵感瞬间。
 - **元数据感官：** 自动抓取创作时的**地理位置、天气、心情**，并支持回溯修改。
 
-### 🎨 灵动设计 (Material 3)
+###🎨 灵动设计 (Material 3)
 
 - **自适应配色：** 全面适配 **Monet (Dynamic Color)**，界面色彩随壁纸律动。
 - **多维回顾：** 瀑布流卡片预览与**热力图日历**并行，让往事有迹可循。
 - **丝滑交互：** 全程 120fps 高刷体验，底部导航栏支持**单行左右滑动快速切换**，关键操作伴有细腻的触感反馈。
 
-### ☁️ WebDAV 智能增量同步
+###☁️ WebDAV 智能增量同步
 
 针对移动端优化的高效同步策略：
 
