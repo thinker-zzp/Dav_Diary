@@ -6,6 +6,14 @@
 
 **云迹** 是一款兼顾“隐私主权”与“极致书写”的日记应用。我们相信数据应归用户所有，通过 **WebDAV** 协议实现无缝的增量备份，配合 **Material 3** 的灵动设计，为你提供最纯粹的记录空间。
 
+<div style="text-align: center;">
+  <div style="display: inline-flex; gap: 20px;">
+    <img src="assets/images/example1.jpg" alt="用户登录界面" width="27%" />
+    <img src="assets/images/example2.jpg" alt="用户仪表盘界面" width="27%" />
+      <img src="assets/images/example3.jpg" alt="用户仪表盘界面" width="27%" />
+  </div>
+</div>
+
 ## ☁️使用教程
 
 以[坚果云](https://www.jianguoyun.com/#/)为例子,官方提供每月1Gb的上传流量,3Gb的下载流量,无限空间
