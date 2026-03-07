@@ -1,4 +1,5 @@
 import 'package:diary/app/app_state.dart';
+import 'package:diary/app/i18n.dart';
 import 'package:diary/data/models/diary_entry.dart';
 import 'package:diary/ui/calendar/calendar_page.dart';
 import 'package:diary/ui/editor/editor_page.dart';
@@ -41,24 +42,28 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    final titles = ['日记', '回顾', '设置'];
+    final titles = [
+      tr(context, zh: '日记', en: 'Diary'),
+      tr(context, zh: '回顾', en: 'Calendar'),
+      tr(context, zh: '设置', en: 'Settings'),
+    ];
     final pages = [
       HomePage(onCreate: () => _openEditor(), onOpen: _openPreview),
       CalendarPage(onOpen: _openPreview),
       const SettingsPage(),
     ];
-    final destinations = const [
+    final destinations = [
       NavigationDestination(
-        icon: Icon(Icons.grid_view_rounded),
-        label: '主页',
+        icon: const Icon(Icons.grid_view_rounded),
+        label: tr(context, zh: '首页', en: 'Home'),
       ),
       NavigationDestination(
-        icon: Icon(Icons.calendar_month_outlined),
-        label: '回顾',
+        icon: const Icon(Icons.calendar_month_outlined),
+        label: tr(context, zh: '回顾', en: 'Calendar'),
       ),
       NavigationDestination(
-        icon: Icon(Icons.settings_outlined),
-        label: '设置',
+        icon: const Icon(Icons.settings_outlined),
+        label: tr(context, zh: '设置', en: 'Settings'),
       ),
     ];
 
@@ -96,7 +101,7 @@ class _HomeShellState extends State<HomeShell> {
               ? FloatingActionButton.extended(
                   onPressed: () => _openEditor(),
                   icon: const Icon(Icons.edit),
-                  label: const Text('写日记'),
+                  label: Text(tr(context, zh: '写日记', en: 'Write')),
                 )
               : null,
           bottomNavigationBar: isTablet

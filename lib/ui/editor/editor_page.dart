@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:diary/app/app_state.dart';
@@ -136,7 +136,10 @@ class _EditorPageState extends State<EditorPage> {
     modalSetState?.call(() {});
   }
 
-  Future<void> _pickImage(ImageSource source, {StateSetter? modalSetState}) async {
+  Future<void> _pickImage(
+    ImageSource source, {
+    StateSetter? modalSetState,
+  }) async {
     try {
       final picker = ImagePicker();
       final file = await picker.pickImage(
@@ -147,9 +150,16 @@ class _EditorPageState extends State<EditorPage> {
       if (file == null) {
         return;
       }
-      final savedPath = await const StorageService().saveImage(file.path);
+      final saved = await const StorageService().saveImageAttachment(file.path);
       setState(() {
-        _attachments = [..._attachments, DiaryAttachment(path: savedPath)];
+        _attachments = [
+          ..._attachments,
+          DiaryAttachment(
+            path: saved.path,
+            hash: saved.hash,
+            thumbnailPath: saved.thumbnailPath,
+          ),
+        ];
       });
       modalSetState?.call(() {});
     } catch (e) {
@@ -163,14 +173,14 @@ class _EditorPageState extends State<EditorPage> {
   }
 
   Future<void> _addDoodle({StateSetter? modalSetState}) async {
-    final path = await Navigator.of(
-      context,
-    ).push<String>(MaterialPageRoute(builder: (context) => const DoodlePage()));
-    if (path == null || path.isEmpty) {
+    final attachment = await Navigator.of(context).push<DiaryAttachment>(
+      MaterialPageRoute(builder: (context) => const DoodlePage()),
+    );
+    if (attachment == null) {
       return;
     }
     setState(() {
-      _attachments = [..._attachments, DiaryAttachment(path: path, type: AttachmentType.doodle)];
+      _attachments = [..._attachments, attachment];
     });
     modalSetState?.call(() {});
   }
@@ -194,7 +204,8 @@ class _EditorPageState extends State<EditorPage> {
               child: const Text('取消'),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+              onPressed: () =>
+                  Navigator.of(context).pop(controller.text.trim()),
               child: const Text('保存'),
             ),
           ],
@@ -230,7 +241,9 @@ class _EditorPageState extends State<EditorPage> {
         throw '定位权限未授予';
       }
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,
+        ),
       );
       final placemarks = await placemarkFromCoordinates(
         pos.latitude,
@@ -240,12 +253,12 @@ class _EditorPageState extends State<EditorPage> {
       final formatted = place == null
           ? '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}'
           : [
-              place.country,
-              place.administrativeArea,
-              place.locality,
-              place.subLocality,
-              place.street,
-            ]
+                  place.country,
+                  place.administrativeArea,
+                  place.locality,
+                  place.subLocality,
+                  place.street,
+                ]
                 .whereType<String>()
                 .map((part) => part.trim())
                 .where((part) => part.isNotEmpty)
@@ -303,9 +316,9 @@ class _EditorPageState extends State<EditorPage> {
     final appState = context.read<DiaryAppState>();
     final plainText = _quillController.document.toPlainText().trim();
     if (plainText.isEmpty && _attachments.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先输入内容或添加附件')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请先输入内容或添加附件')));
       return;
     }
 
@@ -397,7 +410,11 @@ class _EditorPageState extends State<EditorPage> {
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: Image.file(
-          File(attachment.path),
+          File(
+            attachment.thumbnailPath.isNotEmpty
+                ? attachment.thumbnailPath
+                : attachment.path,
+          ),
           width: 52,
           height: 52,
           fit: BoxFit.cover,
@@ -585,7 +602,9 @@ class _EditorPageState extends State<EditorPage> {
                               ? const SizedBox(
                                   width: 16,
                                   height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               : const Icon(Icons.my_location_outlined),
                         ),
@@ -629,19 +648,24 @@ class _EditorPageState extends State<EditorPage> {
                         runSpacing: 8,
                         children: [
                           FilledButton.tonalIcon(
-                            onPressed: () =>
-                                _pickImage(ImageSource.gallery, modalSetState: modalSetState),
+                            onPressed: () => _pickImage(
+                              ImageSource.gallery,
+                              modalSetState: modalSetState,
+                            ),
                             icon: const Icon(Icons.photo_library_outlined),
                             label: const Text('相册'),
                           ),
                           FilledButton.tonalIcon(
-                            onPressed: () =>
-                                _pickImage(ImageSource.camera, modalSetState: modalSetState),
+                            onPressed: () => _pickImage(
+                              ImageSource.camera,
+                              modalSetState: modalSetState,
+                            ),
                             icon: const Icon(Icons.photo_camera_outlined),
                             label: const Text('拍照'),
                           ),
                           FilledButton.tonalIcon(
-                            onPressed: () => _addDoodle(modalSetState: modalSetState),
+                            onPressed: () =>
+                                _addDoodle(modalSetState: modalSetState),
                             icon: const Icon(Icons.draw_outlined),
                             label: const Text('涂鸦'),
                           ),
@@ -781,7 +805,9 @@ class _EditorPageState extends State<EditorPage> {
             child: Container(
               decoration: BoxDecoration(
                 border: Border(
-                  top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+                  top: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
                 ),
               ),
               child: SingleChildScrollView(
@@ -897,5 +923,3 @@ class _EditorPageState extends State<EditorPage> {
     );
   }
 }
-
-

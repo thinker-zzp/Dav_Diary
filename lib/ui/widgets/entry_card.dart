@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:diary/app/i18n.dart';
 import 'package:diary/data/models/diary_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -56,7 +57,9 @@ class EntryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    entry.summary.isEmpty ? '点击继续写作...' : entry.summary,
+                    entry.summary.isEmpty
+                        ? tr(context, zh: '点击继续写作...', en: 'Tap to continue...')
+                        : entry.summary,
                     maxLines: 4,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium,

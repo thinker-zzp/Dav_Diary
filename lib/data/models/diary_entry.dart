@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:path/path.dart' as p;
 
 enum AttachmentType { image, gif, video, doodle, file }
@@ -8,11 +8,19 @@ class DiaryAttachment {
     required this.path,
     this.caption = '',
     this.type = AttachmentType.image,
+    this.hash = '',
+    this.remotePath = '',
+    this.thumbnailPath = '',
+    this.thumbnailRemotePath = '',
   });
 
   final String path;
   final String caption;
   final AttachmentType type;
+  final String hash;
+  final String remotePath;
+  final String thumbnailPath;
+  final String thumbnailRemotePath;
 
   bool get isDoodle => type == AttachmentType.doodle;
   bool get isVisualImage =>
@@ -25,11 +33,19 @@ class DiaryAttachment {
     String? path,
     String? caption,
     AttachmentType? type,
+    String? hash,
+    String? remotePath,
+    String? thumbnailPath,
+    String? thumbnailRemotePath,
   }) {
     return DiaryAttachment(
       path: path ?? this.path,
       caption: caption ?? this.caption,
       type: type ?? this.type,
+      hash: hash ?? this.hash,
+      remotePath: remotePath ?? this.remotePath,
+      thumbnailPath: thumbnailPath ?? this.thumbnailPath,
+      thumbnailRemotePath: thumbnailRemotePath ?? this.thumbnailRemotePath,
     );
   }
 
@@ -37,6 +53,11 @@ class DiaryAttachment {
     'path': path,
     'caption': caption,
     'type': type.name,
+    if (hash.isNotEmpty) 'hash': hash,
+    if (remotePath.isNotEmpty) 'remotePath': remotePath,
+    if (thumbnailPath.isNotEmpty) 'thumbnailPath': thumbnailPath,
+    if (thumbnailRemotePath.isNotEmpty)
+      'thumbnailRemotePath': thumbnailRemotePath,
   };
 
   static DiaryAttachment fromJson(Map<String, dynamic> json) {
@@ -58,6 +79,10 @@ class DiaryAttachment {
       path: attachmentPath,
       caption: (json['caption'] ?? '') as String,
       type: parsedType,
+      hash: (json['hash'] ?? '') as String,
+      remotePath: (json['remotePath'] ?? '') as String,
+      thumbnailPath: (json['thumbnailPath'] ?? '') as String,
+      thumbnailRemotePath: (json['thumbnailRemotePath'] ?? '') as String,
     );
   }
 
@@ -161,6 +186,9 @@ class DiaryEntry {
   String? get firstImagePath {
     for (final attachment in attachments) {
       if (attachment.isVisualImage) {
+        if (attachment.thumbnailPath.isNotEmpty) {
+          return attachment.thumbnailPath;
+        }
         return attachment.path;
       }
     }

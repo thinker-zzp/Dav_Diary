@@ -1,4 +1,5 @@
-﻿import 'package:diary/app/app_state.dart';
+import 'package:diary/app/app_state.dart';
+import 'package:diary/app/i18n.dart';
 import 'package:diary/data/models/diary_entry.dart';
 import 'package:diary/ui/widgets/entry_card.dart';
 import 'package:flutter/material.dart';
@@ -49,7 +50,11 @@ class _HomePageState extends State<HomePage> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: TextField(
                 decoration: InputDecoration(
-                  hintText: '搜索标题或内容',
+                  hintText: tr(
+                    context,
+                    zh: '搜索标题或内容',
+                    en: 'Search title or content',
+                  ),
                   prefixIcon: const Icon(Icons.search),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -69,12 +74,20 @@ class _HomePageState extends State<HomePage> {
                             children: [
                               const Icon(Icons.menu_book_outlined, size: 42),
                               const SizedBox(height: 12),
-                              const Text('还没有日记，先写第一篇吧'),
+                              Text(
+                                tr(
+                                  context,
+                                  zh: '还没有日记，先写第一篇吧',
+                                  en: 'No entries yet, write your first one',
+                                ),
+                              ),
                               const SizedBox(height: 10),
                               FilledButton.icon(
                                 onPressed: widget.onCreate,
                                 icon: const Icon(Icons.add),
-                                label: const Text('新建日记'),
+                                label: Text(
+                                  tr(context, zh: '新建日记', en: 'New Entry'),
+                                ),
                               ),
                             ],
                           ),

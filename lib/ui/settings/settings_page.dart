@@ -1,4 +1,5 @@
-﻿import 'package:diary/app/app_state.dart';
+import 'package:diary/app/app_state.dart';
+import 'package:diary/app/i18n.dart';
 import 'package:diary/data/models/webdav_config.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -15,9 +16,11 @@ class SettingsPage extends StatelessWidget {
       return;
     }
     if (!ok) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('无法打开链接')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(tr(context, zh: '无法打开链接', en: 'Cannot open link')),
+        ),
+      );
     }
   }
 
@@ -27,8 +30,67 @@ class SettingsPage extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
       children: [
         ListTile(
+          leading: const Icon(Icons.cleaning_services_outlined),
+          title: Text(tr(context, zh: '清理附件缓存', en: 'Clear Attachment Cache')),
+          subtitle: Text(
+            tr(
+              context,
+              zh: '删除本地已同步附件，需要时会从 WebDAV 重新拉取',
+              en: 'Delete synced local files and re-download from WebDAV when needed',
+            ),
+          ),
+          onTap: () async {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (context) {
+                return AlertDialog(
+                  title: Text(tr(context, zh: '清理缓存', en: 'Clear Cache')),
+                  content: Text(
+                    tr(
+                      context,
+                      zh: '将删除本地已同步附件的原图文件，缩略图会保留。是否继续？',
+                      en: 'Original synced files will be removed and thumbnails kept. Continue?',
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: Text(tr(context, zh: '取消', en: 'Cancel')),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: Text(tr(context, zh: '清理', en: 'Clear')),
+                    ),
+                  ],
+                );
+              },
+            );
+            if (confirmed != true || !context.mounted) {
+              return;
+            }
+            final removed = await context
+                .read<DiaryAppState>()
+                .clearSyncedAttachmentCache();
+            if (!context.mounted) {
+              return;
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  tr(
+                    context,
+                    zh: '已清理 $removed 个附件缓存文件',
+                    en: 'Cleared $removed cached attachment files',
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        const Divider(height: 1),
+        ListTile(
           leading: const Icon(Icons.cloud_outlined),
-          title: const Text('WebDAV 设置'),
+          title: Text(tr(context, zh: 'WebDAV 设置', en: 'WebDAV')),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             Navigator.of(context).push(
@@ -39,7 +101,7 @@ class SettingsPage extends StatelessWidget {
         const Divider(height: 1),
         ListTile(
           leading: const Icon(Icons.palette_outlined),
-          title: const Text('外观'),
+          title: Text(tr(context, zh: '外观', en: 'Appearance')),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             Navigator.of(context).push(
@@ -50,19 +112,19 @@ class SettingsPage extends StatelessWidget {
         const Divider(height: 1),
         ListTile(
           leading: const Icon(Icons.info_outline),
-          title: const Text('关于项目'),
-          subtitle: const Text('打开 GitHub 项目主页'),
-          trailing: const Icon(Icons.open_in_new),
-          onTap: () => _openLink(
-            context,
-            'https://github.com/kid-depress/Dav_Diary',
+          title: Text(tr(context, zh: '关于项目', en: 'About Project')),
+          subtitle: Text(
+            tr(context, zh: '打开 GitHub 项目主页', en: 'Open GitHub project page'),
           ),
+          trailing: const Icon(Icons.open_in_new),
+          onTap: () =>
+              _openLink(context, 'https://github.com/kid-depress/Dav_Diary'),
         ),
         const Divider(height: 1),
         ListTile(
           leading: const Icon(Icons.support_agent),
-          title: const Text('联系作者'),
-          subtitle: const Text('加入交流群'),
+          title: Text(tr(context, zh: '联系作者', en: 'Contact Author')),
+          subtitle: Text(tr(context, zh: '加入交流群', en: 'Join Group')),
           trailing: const Icon(Icons.open_in_new),
           onTap: () => _openLink(
             context,
@@ -80,21 +142,65 @@ class AppearanceSettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('外观')),
+      appBar: AppBar(
+        title: Text(tr(context, zh: '外观', en: 'Appearance')),
+      ),
       body: Consumer<DiaryAppState>(
         builder: (context, appState, _) {
           return Padding(
             padding: const EdgeInsets.all(16),
-            child: SegmentedButton<ThemeMode>(
-              segments: const [
-                ButtonSegment(value: ThemeMode.system, label: Text('跟随系统')),
-                ButtonSegment(value: ThemeMode.light, label: Text('浅色')),
-                ButtonSegment(value: ThemeMode.dark, label: Text('深色')),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tr(context, zh: '主题', en: 'Theme'),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 10),
+                SegmentedButton<ThemeMode>(
+                  segments: [
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      label: Text(tr(context, zh: '跟随系统', en: 'System')),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      label: Text(tr(context, zh: '浅色', en: 'Light')),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      label: Text(tr(context, zh: '深色', en: 'Dark')),
+                    ),
+                  ],
+                  selected: {appState.themeMode},
+                  onSelectionChanged: (selection) {
+                    appState.setThemeMode(selection.first);
+                  },
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  tr(context, zh: '语言', en: 'Language'),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 10),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'zh_CN', label: Text('中文')),
+                    ButtonSegment(value: 'en_US', label: Text('English')),
+                  ],
+                  selected: {
+                    appState.locale.languageCode == 'en' ? 'en_US' : 'zh_CN',
+                  },
+                  onSelectionChanged: (selection) {
+                    final code = selection.first;
+                    if (code == 'en_US') {
+                      appState.setLocale(const Locale('en', 'US'));
+                    } else {
+                      appState.setLocale(const Locale('zh', 'CN'));
+                    }
+                  },
+                ),
               ],
-              selected: {appState.themeMode},
-              onSelectionChanged: (selection) {
-                appState.setThemeMode(selection.first);
-              },
             ),
           );
         },
@@ -165,14 +271,20 @@ class _WebDavSettingsPageState extends State<WebDavSettingsPage> {
     if (!mounted) {
       return false;
     }
-    messenger.showSnackBar(const SnackBar(content: Text('配置已保存')));
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(tr(context, zh: '配置已保存', en: 'Saved')),
+      ),
+    );
     return true;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('WebDAV 设置')),
+      appBar: AppBar(
+        title: Text(tr(context, zh: 'WebDAV 设置', en: 'WebDAV')),
+      ),
       body: Consumer<DiaryAppState>(
         builder: (context, appState, _) {
           return ListView(
@@ -184,29 +296,37 @@ class _WebDavSettingsPageState extends State<WebDavSettingsPage> {
                   children: [
                     TextFormField(
                       controller: _urlController,
-                      decoration: const InputDecoration(
-                        labelText: '服务器地址',
+                      decoration: InputDecoration(
+                        labelText: tr(context, zh: '服务器地址', en: 'Server URL'),
                         hintText: 'https://dav.example.com',
                       ),
                       validator: (value) =>
-                          (value == null || value.trim().isEmpty) ? '必填' : null,
+                          (value == null || value.trim().isEmpty)
+                          ? tr(context, zh: '必填', en: 'Required')
+                          : null,
                     ),
                     const SizedBox(height: 10),
                     TextFormField(
                       controller: _userController,
-                      decoration: const InputDecoration(labelText: '用户名'),
+                      decoration: InputDecoration(
+                        labelText: tr(context, zh: '用户名', en: 'Username'),
+                      ),
                       validator: (value) =>
-                          (value == null || value.trim().isEmpty) ? '必填' : null,
+                          (value == null || value.trim().isEmpty)
+                          ? tr(context, zh: '必填', en: 'Required')
+                          : null,
                     ),
                     const SizedBox(height: 10),
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
-                        labelText: '密码',
+                        labelText: tr(context, zh: '密码', en: 'Password'),
                         suffixIcon: IconButton(
                           onPressed: () {
-                            setState(() => _obscurePassword = !_obscurePassword);
+                            setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            );
                           },
                           icon: Icon(
                             _obscurePassword
@@ -216,25 +336,39 @@ class _WebDavSettingsPageState extends State<WebDavSettingsPage> {
                         ),
                       ),
                       validator: (value) =>
-                          (value == null || value.trim().isEmpty) ? '必填' : null,
+                          (value == null || value.trim().isEmpty)
+                          ? tr(context, zh: '必填', en: 'Required')
+                          : null,
                     ),
                     const SizedBox(height: 10),
                     TextFormField(
                       controller: _remoteDirController,
-                      decoration: const InputDecoration(labelText: '远端目录'),
+                      decoration: InputDecoration(
+                        labelText: tr(context, zh: '远端目录', en: 'Remote Dir'),
+                      ),
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<ConflictStrategy>(
                       initialValue: _conflictStrategy,
-                      decoration: const InputDecoration(labelText: '冲突策略'),
-                      items: const [
+                      decoration: InputDecoration(
+                        labelText: tr(
+                          context,
+                          zh: '冲突策略',
+                          en: 'Conflict Strategy',
+                        ),
+                      ),
+                      items: [
                         DropdownMenuItem(
                           value: ConflictStrategy.lastWriteWins,
-                          child: Text('最后修改者优先'),
+                          child: Text(
+                            tr(context, zh: '最后修改者优先', en: 'Last Write Wins'),
+                          ),
                         ),
                         DropdownMenuItem(
                           value: ConflictStrategy.keepBoth,
-                          child: Text('保留两个副本'),
+                          child: Text(
+                            tr(context, zh: '保留两个副本', en: 'Keep Both'),
+                          ),
                         ),
                       ],
                       onChanged: (value) {
@@ -249,7 +383,10 @@ class _WebDavSettingsPageState extends State<WebDavSettingsPage> {
               const SizedBox(height: 10),
               if (appState.lastSyncAt != null)
                 Text(
-                  '上次同步：${DateFormat('yyyy-MM-dd HH:mm').format(appState.lastSyncAt!)}',
+                  tr(context, zh: '上次同步：', en: 'Last sync: ') +
+                      DateFormat(
+                        'yyyy-MM-dd HH:mm',
+                      ).format(appState.lastSyncAt!),
                 ),
               const SizedBox(height: 10),
               Wrap(
@@ -259,7 +396,7 @@ class _WebDavSettingsPageState extends State<WebDavSettingsPage> {
                   FilledButton.icon(
                     onPressed: _saveConfig,
                     icon: const Icon(Icons.save_outlined),
-                    label: const Text('保存'),
+                    label: Text(tr(context, zh: '保存', en: 'Save')),
                   ),
                   OutlinedButton.icon(
                     onPressed: appState.syncing
@@ -275,19 +412,37 @@ class _WebDavSettingsPageState extends State<WebDavSettingsPage> {
                                 return;
                               }
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(ok ? '连接成功' : '连接失败')),
+                                SnackBar(
+                                  content: Text(
+                                    ok
+                                        ? tr(
+                                            context,
+                                            zh: '连接成功',
+                                            en: 'Connected',
+                                          )
+                                        : tr(
+                                            context,
+                                            zh: '连接失败',
+                                            en: 'Failed to connect',
+                                          ),
+                                  ),
+                                ),
                               );
                             } catch (e) {
                               if (!context.mounted) {
                                 return;
                               }
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('连接失败：$e')),
+                                SnackBar(
+                                  content: Text(
+                                    '${tr(context, zh: '连接失败：', en: 'Connection failed: ')}$e',
+                                  ),
+                                ),
                               );
                             }
                           },
                     icon: const Icon(Icons.network_check_outlined),
-                    label: const Text('测试连接'),
+                    label: Text(tr(context, zh: '测试连接', en: 'Test')),
                   ),
                   FilledButton.tonalIcon(
                     onPressed: appState.syncing
@@ -304,7 +459,7 @@ class _WebDavSettingsPageState extends State<WebDavSettingsPage> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  '${result.message} 上传:${result.uploaded} 下载:${result.downloaded} 冲突:${result.conflicts}',
+                                  '${result.message} ${tr(context, zh: '上传', en: 'up')}:${result.uploaded} ${tr(context, zh: '下载', en: 'down')}:${result.downloaded} ${tr(context, zh: '冲突', en: 'conflicts')}:${result.conflicts}',
                                 ),
                               ),
                             );
@@ -316,7 +471,11 @@ class _WebDavSettingsPageState extends State<WebDavSettingsPage> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.sync),
-                    label: Text(appState.syncing ? '同步中...' : '立即同步'),
+                    label: Text(
+                      appState.syncing
+                          ? tr(context, zh: '同步中...', en: 'Syncing...')
+                          : tr(context, zh: '立即同步', en: 'Sync now'),
+                    ),
                   ),
                 ],
               ),

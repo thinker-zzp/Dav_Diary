@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:diary/data/models/diary_entry.dart';
 import 'package:diary/services/storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:signature/signature.dart';
@@ -53,13 +54,20 @@ class _DoodlePageState extends State<DoodlePage> {
       ).showSnackBar(const SnackBar(content: Text('请先绘制内容')));
       return;
     }
-    final path = await const StorageService().saveDoodle(
+    final saved = await const StorageService().saveDoodleAttachment(
       Uint8List.fromList(png),
     );
     if (!mounted) {
       return;
     }
-    Navigator.of(context).pop(path);
+    Navigator.of(context).pop(
+      DiaryAttachment(
+        path: saved.path,
+        type: AttachmentType.doodle,
+        hash: saved.hash,
+        thumbnailPath: saved.thumbnailPath,
+      ),
+    );
   }
 
   @override

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:diary/app/app_state.dart';
+import 'package:diary/app/i18n.dart';
 import 'package:diary/data/models/diary_entry.dart';
 import 'package:diary/services/storage_service.dart';
 import 'package:diary/ui/editor/editor_page.dart';
@@ -77,31 +78,71 @@ class _EntryPreviewPageState extends State<EntryPreviewPage> {
 
   Future<void> _openAttachment(DiaryAttachment attachment) async {
     if (!attachment.isVisualImage && !attachment.isVideo) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('该附件暂不支持预览')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This attachment type is not supported')),
+      );
       return;
     }
-    final resolvedPath = await _resolveAttachmentPath(attachment.path);
+    final resolvedAttachment = await _ensureAttachmentReady(attachment);
     if (!mounted) {
       return;
     }
-    if (resolvedPath == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('附件文件不存在或已丢失')));
+    final resolvedPath = resolvedAttachment?.path ?? '';
+    if (resolvedPath.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Attachment file is missing')),
+      );
       return;
     }
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (context) => AttachmentPreviewPage(
-          attachment: attachment.copyWith(path: resolvedPath),
-        ),
+        builder: (context) =>
+            AttachmentPreviewPage(attachment: resolvedAttachment!),
       ),
     );
   }
 
+  Future<DiaryAttachment?> _ensureAttachmentReady(
+    DiaryAttachment attachment,
+  ) async {
+    final appState = context.read<DiaryAppState>();
+    final localPath = await _resolveAttachmentPath(attachment.path);
+    if (localPath != null && localPath.isNotEmpty) {
+      return attachment.copyWith(path: localPath);
+    }
+    if (attachment.remotePath.trim().isEmpty) {
+      return null;
+    }
+
+    final restored = await appState.restoreAttachmentForEntry(
+      _entry.id,
+      attachment,
+    );
+    if (restored == null) {
+      return null;
+    }
+
+    _resolvedPathCache.clear();
+    final reloaded = appState.entries.firstWhere(
+      (item) => item.id == _entry.id,
+      orElse: () => _entry,
+    );
+    if (!mounted) {
+      return restored;
+    }
+    final nextController = _buildPreviewController(reloaded);
+    setState(() {
+      _entry = reloaded;
+      _previewController.dispose();
+      _previewController = nextController;
+    });
+    return restored;
+  }
+
   Future<String?> _resolveAttachmentPath(String rawPath) {
+    if (rawPath.trim().isEmpty) {
+      return Future.value(null);
+    }
     return _resolvedPathCache.putIfAbsent(
       rawPath,
       () => _storageService.resolveAttachmentPath(rawPath),
@@ -118,6 +159,10 @@ class _EntryPreviewPageState extends State<EntryPreviewPage> {
   }
 
   Widget _buildAttachment(DiaryAttachment attachment, {double size = 120}) {
+    final previewPath = attachment.thumbnailPath.isNotEmpty
+        ? attachment.thumbnailPath
+        : attachment.path;
+
     if (attachment.isVisualImage) {
       return InkWell(
         onTap: () => _openAttachment(attachment),
@@ -128,7 +173,7 @@ class _EntryPreviewPageState extends State<EntryPreviewPage> {
             width: size,
             height: size,
             child: FutureBuilder<String?>(
-              future: _resolveAttachmentPath(attachment.path),
+              future: _resolveAttachmentPath(previewPath),
               builder: (context, snapshot) {
                 final resolvedPath = snapshot.data;
                 return Stack(
@@ -184,7 +229,7 @@ class _EntryPreviewPageState extends State<EntryPreviewPage> {
         width: size,
         height: size,
         child: FutureBuilder<String?>(
-          future: _resolveAttachmentPath(attachment.path),
+          future: _resolveAttachmentPath(previewPath),
           builder: (context, snapshot) {
             final exists = snapshot.data != null;
             return Container(
@@ -212,13 +257,18 @@ class _EntryPreviewPageState extends State<EntryPreviewPage> {
   Widget build(BuildContext context) {
     final dateText = DateFormat('yyyy-MM-dd HH:mm').format(_entry.eventAt);
     final locationText = _entry.location.trim().isEmpty
-        ? '未设置'
+        ? tr(context, zh: '未设置', en: 'Not set')
         : _entry.location;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('日记预览'),
-        actions: [TextButton(onPressed: _editEntry, child: const Text('编辑'))],
+        title: Text(tr(context, zh: '日记预览', en: 'Entry Preview')),
+        actions: [
+          TextButton(
+            onPressed: _editEntry,
+            child: Text(tr(context, zh: '编辑', en: 'Edit')),
+          ),
+        ],
       ),
       body: SafeArea(
         child: LayoutBuilder(
@@ -248,17 +298,33 @@ class _EntryPreviewPageState extends State<EntryPreviewPage> {
                         context,
                       ).colorScheme.surfaceContainerLowest,
                     ),
-                    child: const Text('无附件'),
+                    child: Text(tr(context, zh: '无附件', en: 'No attachments')),
                   );
 
             final metadataSection = Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                Chip(label: Text('心情 ${_entry.mood}')),
-                Chip(label: Text('天气 ${_entry.weather}')),
-                Chip(label: Text('时间 $dateText')),
-                Chip(label: Text('地址 $locationText')),
+                Chip(
+                  label: Text(tr(context, zh: '心情 ${_entry.mood}', en: 'Mood ${_entry.mood}')),
+                ),
+                Chip(
+                  label: Text(
+                    tr(
+                      context,
+                      zh: '天气 ${_entry.weather}',
+                      en: 'Weather ${_entry.weather}',
+                    ),
+                  ),
+                ),
+                Chip(
+                  label: Text(tr(context, zh: '时间 $dateText', en: 'Time $dateText')),
+                ),
+                Chip(
+                  label: Text(
+                    tr(context, zh: '位置 $locationText', en: 'Location $locationText'),
+                  ),
+                ),
               ],
             );
 
@@ -271,7 +337,10 @@ class _EntryPreviewPageState extends State<EntryPreviewPage> {
                 color: Theme.of(context).colorScheme.surfaceContainerLowest,
               ),
               child: _entry.plainText.trim().isEmpty
-                  ? Text('（无正文）', style: Theme.of(context).textTheme.bodyLarge)
+                  ? Text(
+                      tr(context, zh: '（无正文）', en: '(No text)'),
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    )
                   : QuillEditor.basic(
                       controller: _previewController,
                       focusNode: _previewFocusNode,

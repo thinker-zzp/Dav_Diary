@@ -1,4 +1,5 @@
-﻿import 'package:diary/app/app_state.dart';
+import 'package:diary/app/app_state.dart';
+import 'package:diary/app/i18n.dart';
 import 'package:diary/data/database/app_database.dart';
 import 'package:diary/data/repositories/diary_repository.dart';
 import 'package:diary/data/repositories/settings_repository.dart';
@@ -47,9 +48,10 @@ class _DiaryAppBootstrapState extends State<DiaryAppBootstrap> {
           child: Consumer<DiaryAppState>(
             builder: (context, appState, _) {
               return MaterialApp(
-                title: '日记',
+                onGenerateTitle: (context) =>
+                    tr(context, zh: '日记', en: 'Diary'),
                 debugShowCheckedModeBanner: false,
-                locale: const Locale('zh', 'CN'),
+                locale: appState.locale,
                 supportedLocales: const [
                   Locale('zh', 'CN'),
                   Locale('en', 'US'),

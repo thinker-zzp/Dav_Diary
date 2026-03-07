@@ -1,10 +1,62 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:diary/data/models/diary_entry.dart';
+import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
+import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
+
+class StoredAttachmentData {
+  const StoredAttachmentData({
+    required this.path,
+    required this.hash,
+    this.thumbnailPath = '',
+  });
+
+  final String path;
+  final String hash;
+  final String thumbnailPath;
+}
+
+Future<Map<String, Uint8List>> _processImageInIsolate(
+  Map<String, Object> payload,
+) async {
+  final bytes = payload['bytes'] as Uint8List;
+  final maxEdge = (payload['maxEdge'] ?? 1920) as int;
+  final thumbEdge = (payload['thumbEdge'] ?? 360) as int;
+  final quality = (payload['quality'] ?? 84) as int;
+  final sourceName = (payload['sourceName'] ?? '') as String;
+
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) {
+    return <String, Uint8List>{'main': bytes};
+  }
+
+  final ext = p.extension(sourceName).toLowerCase();
+  final keepPng = ext == '.png';
+
+  final resized = img.copyResize(
+    decoded,
+    width: decoded.width >= decoded.height ? maxEdge : null,
+    height: decoded.height > decoded.width ? maxEdge : null,
+    interpolation: img.Interpolation.average,
+  );
+  final thumb = img.copyResize(
+    decoded,
+    width: decoded.width >= decoded.height ? thumbEdge : null,
+    height: decoded.height > decoded.width ? thumbEdge : null,
+    interpolation: img.Interpolation.average,
+  );
+
+  final main = keepPng
+      ? Uint8List.fromList(img.encodePng(resized, level: 6))
+      : Uint8List.fromList(img.encodeJpg(resized, quality: quality));
+  final thumbnail = Uint8List.fromList(img.encodeJpg(thumb, quality: 72));
+
+  return <String, Uint8List>{'main': main, 'thumb': thumbnail};
+}
 
 class StorageService {
   const StorageService();
@@ -18,6 +70,15 @@ class StorageService {
     return media;
   }
 
+  Future<Directory> _thumbDir() async {
+    final media = await _mediaDir();
+    final thumbs = Directory(p.join(media.path, 'thumbs'));
+    if (!await thumbs.exists()) {
+      await thumbs.create(recursive: true);
+    }
+    return thumbs;
+  }
+
   Future<String> _copyToMedia(String sourcePath, {String? defaultExt}) async {
     final media = await _mediaDir();
     final ext = p.extension(sourcePath).toLowerCase();
@@ -28,8 +89,45 @@ class StorageService {
     return target.path;
   }
 
-  Future<String> saveImage(String sourcePath) {
-    return _copyToMedia(sourcePath, defaultExt: '.jpg');
+  Future<StoredAttachmentData> saveImageAttachment(String sourcePath) async {
+    final raw = await File(sourcePath).readAsBytes();
+    final processed = await compute(_processImageInIsolate, <String, Object>{
+      'bytes': raw,
+      'sourceName': p.basename(sourcePath),
+      'maxEdge': 1920,
+      'thumbEdge': 360,
+      'quality': 84,
+    });
+
+    final ext = p.extension(sourcePath).toLowerCase();
+    final normalizedExt = ext.isEmpty ? '.jpg' : ext;
+    final media = await _mediaDir();
+    final fileName = '${const Uuid().v4()}$normalizedExt';
+    final target = File(p.join(media.path, fileName));
+    final mainBytes = processed['main'] ?? raw;
+    await target.writeAsBytes(mainBytes, flush: true);
+
+    var thumbPath = '';
+    final thumbBytes = processed['thumb'];
+    if (thumbBytes != null) {
+      final thumbDir = await _thumbDir();
+      final thumbName = '${const Uuid().v4()}.jpg';
+      final thumbTarget = File(p.join(thumbDir.path, thumbName));
+      await thumbTarget.writeAsBytes(thumbBytes, flush: true);
+      thumbPath = thumbTarget.path;
+    }
+
+    final hash = sha256.convert(mainBytes).toString();
+    return StoredAttachmentData(
+      path: target.path,
+      hash: hash,
+      thumbnailPath: thumbPath,
+    );
+  }
+
+  Future<String> saveImage(String sourcePath) async {
+    final saved = await saveImageAttachment(sourcePath);
+    return saved.path;
   }
 
   Future<String> saveAttachment(String sourcePath) {
@@ -104,28 +202,107 @@ class StorageService {
     String? sourceName,
     String defaultExt = '.bin',
   }) async {
+    final saved = await saveAttachmentBytesWithThumbnail(
+      bytes,
+      sourceName: sourceName,
+      defaultExt: defaultExt,
+      withThumbnail: false,
+    );
+    return saved.path;
+  }
+
+  Future<StoredAttachmentData> saveAttachmentBytesWithThumbnail(
+    Uint8List bytes, {
+    String? sourceName,
+    String defaultExt = '.bin',
+    bool withThumbnail = true,
+  }) async {
     final media = await _mediaDir();
     final ext = p.extension(sourceName ?? '').toLowerCase();
     final normalizedExt = ext.isEmpty ? defaultExt : ext;
     final fileName = '${const Uuid().v4()}$normalizedExt';
     final target = File(p.join(media.path, fileName));
     await target.writeAsBytes(bytes, flush: true);
-    return target.path;
+
+    var thumbPath = '';
+    final imageLike = const [
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.gif',
+      '.webp',
+      '.bmp',
+      '.heic',
+    ].contains(normalizedExt);
+    if (withThumbnail && imageLike) {
+      final processed = await compute(_processImageInIsolate, <String, Object>{
+        'bytes': bytes,
+        'sourceName': sourceName ?? '',
+        'maxEdge': 1920,
+        'thumbEdge': 360,
+        'quality': 84,
+      });
+      final thumbBytes = processed['thumb'];
+      if (thumbBytes != null) {
+        final thumbDir = await _thumbDir();
+        final thumbName = '${const Uuid().v4()}.jpg';
+        final thumbTarget = File(p.join(thumbDir.path, thumbName));
+        await thumbTarget.writeAsBytes(thumbBytes, flush: true);
+        thumbPath = thumbTarget.path;
+      }
+    }
+
+    final hash = sha256.convert(bytes).toString();
+    return StoredAttachmentData(
+      path: target.path,
+      hash: hash,
+      thumbnailPath: thumbPath,
+    );
   }
 
-  Future<String> saveDoodle(Uint8List bytes) async {
+  Future<StoredAttachmentData> saveDoodleAttachment(Uint8List bytes) async {
     final media = await _mediaDir();
     final fileName = '${const Uuid().v4()}.png';
     final target = File(p.join(media.path, fileName));
     await target.writeAsBytes(bytes, flush: true);
-    return target.path;
+
+    final processed = await compute(_processImageInIsolate, <String, Object>{
+      'bytes': bytes,
+      'sourceName': 'doodle.png',
+      'maxEdge': 2048,
+      'thumbEdge': 360,
+      'quality': 84,
+    });
+    var thumbPath = '';
+    final thumbBytes = processed['thumb'];
+    if (thumbBytes != null) {
+      final thumbDir = await _thumbDir();
+      final thumbName = '${const Uuid().v4()}.jpg';
+      final thumbTarget = File(p.join(thumbDir.path, thumbName));
+      await thumbTarget.writeAsBytes(thumbBytes, flush: true);
+      thumbPath = thumbTarget.path;
+    }
+
+    final hash = sha256.convert(bytes).toString();
+    return StoredAttachmentData(
+      path: target.path,
+      hash: hash,
+      thumbnailPath: thumbPath,
+    );
+  }
+
+  Future<String> saveDoodle(Uint8List bytes) async {
+    final saved = await saveDoodleAttachment(bytes);
+    return saved.path;
   }
 
   Future<int> cleanupOrphanedMedia(List<DiaryEntry> entries) async {
     final media = await _mediaDir();
     final referenced = entries
         .expand((entry) => entry.attachments)
-        .map((item) => p.normalize(item.path))
+        .expand((item) => [item.path, item.thumbnailPath])
+        .where((item) => item.trim().isNotEmpty)
+        .map((item) => p.normalize(item))
         .toSet();
 
     var removed = 0;
@@ -142,6 +319,29 @@ class StorageService {
         removed++;
       } catch (_) {
         // ignore file lock or permission failures
+      }
+    }
+    return removed;
+  }
+
+  Future<int> cleanupSyncedAttachmentCache(List<DiaryEntry> entries) async {
+    var removed = 0;
+    for (final entry in entries) {
+      for (final attachment in entry.attachments) {
+        if (attachment.remotePath.trim().isEmpty ||
+            attachment.path.trim().isEmpty) {
+          continue;
+        }
+        final file = File(attachment.path);
+        if (!await file.exists()) {
+          continue;
+        }
+        try {
+          await file.delete();
+          removed++;
+        } catch (_) {
+          // ignore file lock or permission failures
+        }
       }
     }
     return removed;

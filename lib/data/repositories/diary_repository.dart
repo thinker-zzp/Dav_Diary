@@ -63,6 +63,21 @@ class DiaryRepository {
     return rows.map(DiaryEntry.fromDbMap).toList();
   }
 
+  Future<Map<String, DateTime>> listSyncHeads() async {
+    final db = await _db;
+    final rows = await db.query('entries', columns: ['id', 'updated_at']);
+    final result = <String, DateTime>{};
+    for (final row in rows) {
+      final id = (row['id'] ?? '') as String;
+      if (id.isEmpty) {
+        continue;
+      }
+      final updatedAtEpoch = (row['updated_at'] ?? 0) as int;
+      result[id] = DateTime.fromMillisecondsSinceEpoch(updatedAtEpoch);
+    }
+    return result;
+  }
+
   Future<DiaryEntry?> getById(String id) async {
     final db = await _db;
     final rows = await db.query(

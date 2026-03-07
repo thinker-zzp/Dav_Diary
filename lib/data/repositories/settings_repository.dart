@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsRepository {
   static const _keyThemeMode = 'theme_mode';
+  static const _keyLocale = 'locale';
   static const _keyWebDavConfig = 'webdav_config';
   static const _keyLastSyncAt = 'last_sync_at';
 
@@ -27,6 +28,27 @@ class SettingsRepository {
   Future<void> saveThemeMode(ThemeMode mode) async {
     final prefs = await _prefs;
     await prefs.setString(_keyThemeMode, mode.name);
+  }
+
+  Future<Locale> loadLocale() async {
+    final prefs = await _prefs;
+    final value = prefs.getString(_keyLocale) ?? 'zh_CN';
+    switch (value) {
+      case 'en_US':
+        return const Locale('en', 'US');
+      default:
+        return const Locale('zh', 'CN');
+    }
+  }
+
+  Future<void> saveLocale(Locale locale) async {
+    final prefs = await _prefs;
+    final languageCode = locale.languageCode.toLowerCase();
+    if (languageCode == 'en') {
+      await prefs.setString(_keyLocale, 'en_US');
+      return;
+    }
+    await prefs.setString(_keyLocale, 'zh_CN');
   }
 
   Future<WebDavConfig> loadWebDavConfig() async {

@@ -1,4 +1,4 @@
-﻿import 'package:diary/data/models/diary_entry.dart';
+import 'package:diary/data/models/diary_entry.dart';
 import 'package:diary/data/models/webdav_config.dart';
 import 'package:diary/data/repositories/diary_repository.dart';
 import 'package:diary/data/repositories/settings_repository.dart';
@@ -25,6 +25,7 @@ class DiaryAppState extends ChangeNotifier {
   bool _loading = true;
   bool _syncing = false;
   ThemeMode _themeMode = ThemeMode.system;
+  Locale _locale = const Locale('zh', 'CN');
   DateTime? _lastSyncAt;
   WebDavConfig _webDavConfig = const WebDavConfig();
   List<DiaryEntry> _entries = const [];
@@ -32,12 +33,14 @@ class DiaryAppState extends ChangeNotifier {
   bool get loading => _loading;
   bool get syncing => _syncing;
   ThemeMode get themeMode => _themeMode;
+  Locale get locale => _locale;
   DateTime? get lastSyncAt => _lastSyncAt;
   WebDavConfig get webDavConfig => _webDavConfig;
   List<DiaryEntry> get entries => _entries;
 
   Future<void> initialize() async {
     _themeMode = await _settingsRepository.loadThemeMode();
+    _locale = await _settingsRepository.loadLocale();
     _webDavConfig = await _settingsRepository.loadWebDavConfig();
     _lastSyncAt = await _settingsRepository.loadLastSyncAt();
     await refreshEntries();
@@ -97,6 +100,12 @@ class DiaryAppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setLocale(Locale locale) async {
+    _locale = locale;
+    await _settingsRepository.saveLocale(locale);
+    notifyListeners();
+  }
+
   Future<void> updateWebDavConfig(WebDavConfig config) async {
     _webDavConfig = config;
     await _settingsRepository.saveWebDavConfig(config);
@@ -116,5 +125,70 @@ class DiaryAppState extends ChangeNotifier {
     await refreshEntries();
     await _storageService.cleanupOrphanedMedia(_entries);
     return result;
+  }
+
+  Future<DiaryAttachment?> restoreAttachmentForEntry(
+    String entryId,
+    DiaryAttachment attachment,
+  ) async {
+    final restored = await _syncService.restoreAttachment(attachment);
+    if (restored == null) {
+      return null;
+    }
+    final current = await _diaryRepository.getById(entryId);
+    if (current == null) {
+      return restored;
+    }
+
+    var changed = false;
+    final nextAttachments = current.attachments.map((item) {
+      final sameHash = item.hash.isNotEmpty && item.hash == attachment.hash;
+      final sameRemote =
+          item.remotePath.isNotEmpty &&
+          item.remotePath == attachment.remotePath;
+      final samePath = item.path.isNotEmpty && item.path == attachment.path;
+      if (sameHash || sameRemote || samePath) {
+        changed = true;
+        return restored;
+      }
+      return item;
+    }).toList();
+
+    if (changed) {
+      await _diaryRepository.upsert(
+        current.copyWith(attachments: nextAttachments),
+      );
+      await refreshEntries();
+    }
+    return restored;
+  }
+
+  Future<int> clearSyncedAttachmentCache() async {
+    final removed = await _storageService.cleanupSyncedAttachmentCache(
+      _entries,
+    );
+    var touched = 0;
+    for (final entry in _entries) {
+      var changed = false;
+      final updatedAttachments = entry.attachments.map((attachment) {
+        if (attachment.remotePath.trim().isNotEmpty &&
+            attachment.path.trim().isNotEmpty) {
+          changed = true;
+          return attachment.copyWith(path: '');
+        }
+        return attachment;
+      }).toList();
+      if (!changed) {
+        continue;
+      }
+      touched++;
+      await _diaryRepository.upsert(
+        entry.copyWith(attachments: updatedAttachments),
+      );
+    }
+    if (touched > 0) {
+      await refreshEntries();
+    }
+    return removed;
   }
 }

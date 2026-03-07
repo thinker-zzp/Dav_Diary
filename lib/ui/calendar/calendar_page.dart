@@ -1,4 +1,5 @@
 import 'package:diary/app/app_state.dart';
+import 'package:diary/app/i18n.dart';
 import 'package:diary/data/models/diary_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -20,6 +21,7 @@ class _CalendarPageState extends State<CalendarPage> {
 
   @override
   Widget build(BuildContext context) {
+    final localeTag = isZh(context) ? 'zh_CN' : 'en_US';
     return Consumer<DiaryAppState>(
       builder: (context, appState, _) {
         final dayEntries = appState.entriesOfDay(_selectedDay);
@@ -29,6 +31,7 @@ class _CalendarPageState extends State<CalendarPage> {
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
               child: Card(
                 child: TableCalendar<DiaryEntry>(
+                  locale: localeTag,
                   focusedDay: _focusedDay,
                   firstDay: DateTime.utc(2010, 1, 1),
                   lastDay: DateTime.utc(2100, 12, 31),
@@ -59,13 +62,27 @@ class _CalendarPageState extends State<CalendarPage> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(width: 8),
-                  Text('共 ${dayEntries.length} 条'),
+                  Text(
+                    tr(
+                      context,
+                      zh: '共 ${dayEntries.length} 条',
+                      en: '${dayEntries.length} entries',
+                    ),
+                  ),
                 ],
               ),
             ),
             Expanded(
               child: dayEntries.isEmpty
-                  ? const Center(child: Text('这一天还没有记录'))
+                  ? Center(
+                      child: Text(
+                        tr(
+                          context,
+                          zh: '这一天还没有记录',
+                          en: 'No entries on this day',
+                        ),
+                      ),
+                    )
                   : ListView.separated(
                       padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
                       itemBuilder: (context, index) {
@@ -78,7 +95,9 @@ class _CalendarPageState extends State<CalendarPage> {
                             borderRadius: BorderRadius.circular(14),
                           ),
                           title: Text(
-                            entry.summary.isEmpty ? '空白日记' : entry.summary,
+                            entry.summary.isEmpty
+                                ? tr(context, zh: '空白日记', en: 'Empty entry')
+                                : entry.summary,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
