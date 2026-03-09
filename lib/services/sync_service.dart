@@ -93,6 +93,37 @@ class SyncService {
   String _attachmentDir(String root) => '$root/attachments';
   String _manifestPath(String root) => '$root/manifest.json';
 
+  Future<bool> _needsAttachmentHydration(DiaryEntry? localEntry) async {
+    if (localEntry == null) {
+      return false;
+    }
+    for (final attachment in localEntry.attachments) {
+      final hasRemoteMain = attachment.remotePath.trim().isNotEmpty;
+      final hasRemoteThumb = attachment.thumbnailRemotePath.trim().isNotEmpty;
+      if (!hasRemoteMain && !hasRemoteThumb) {
+        continue;
+      }
+
+      final localPath = attachment.path.trim();
+      final mainMissing =
+          localPath.isEmpty || !await File(localPath).exists();
+      if (mainMissing && hasRemoteMain) {
+        return true;
+      }
+
+      if (!attachment.isVisualImage) {
+        continue;
+      }
+      final thumbPath = attachment.thumbnailPath.trim();
+      final thumbMissing =
+          thumbPath.isEmpty || !await File(thumbPath).exists();
+      if (thumbMissing && hasRemoteThumb) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   Future<Map<String, _ManifestItem>> _loadManifest(
     webdav.Client client,
     String remoteRoot,
@@ -398,12 +429,14 @@ class SyncService {
         ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
       for (final item in remoteItems) {
+        final local = await _diaryRepository.getById(item.id);
         final localUpdated = localHeads[item.id];
-        if (localUpdated != null && !item.updatedAt.isAfter(localUpdated)) {
+        final upToDate =
+            localUpdated != null && !item.updatedAt.isAfter(localUpdated);
+        if (upToDate && !await _needsAttachmentHydration(local)) {
           continue;
         }
 
-        final local = await _diaryRepository.getById(item.id);
         final localDirty = local != null && local.updatedAt.isAfter(lastSync);
         final remoteDirty = item.updatedAt.isAfter(lastSync);
         if (local != null &&

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:diary/data/models/diary_entry.dart';
 import 'package:diary/data/models/webdav_config.dart';
 import 'package:diary/data/repositories/diary_repository.dart';
@@ -87,11 +89,13 @@ class DiaryAppState extends ChangeNotifier {
   Future<void> saveEntry(DiaryEntry entry) async {
     await _diaryRepository.upsert(entry);
     await refreshEntries();
+    await _autoSyncAfterLocalChange();
   }
 
   Future<void> deleteEntry(String id) async {
     await _diaryRepository.softDelete(id);
     await refreshEntries();
+    await _autoSyncAfterLocalChange();
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
@@ -125,6 +129,13 @@ class DiaryAppState extends ChangeNotifier {
     await refreshEntries();
     await _storageService.cleanupOrphanedMedia(_entries);
     return result;
+  }
+
+  Future<void> _autoSyncAfterLocalChange() async {
+    if (!_webDavConfig.isConfigured || _syncing) {
+      return;
+    }
+    await syncNow();
   }
 
   Future<DiaryAttachment?> restoreAttachmentForEntry(
@@ -170,14 +181,19 @@ class DiaryAppState extends ChangeNotifier {
     var touched = 0;
     for (final entry in _entries) {
       var changed = false;
-      final updatedAttachments = entry.attachments.map((attachment) {
+      final updatedAttachments = <DiaryAttachment>[];
+      for (final attachment in entry.attachments) {
         if (attachment.remotePath.trim().isNotEmpty &&
             attachment.path.trim().isNotEmpty) {
-          changed = true;
-          return attachment.copyWith(path: '');
+          final stillExists = await File(attachment.path).exists();
+          if (!stillExists) {
+            changed = true;
+            updatedAttachments.add(attachment.copyWith(path: ''));
+            continue;
+          }
         }
-        return attachment;
-      }).toList();
+        updatedAttachments.add(attachment);
+      }
       if (!changed) {
         continue;
       }

@@ -61,6 +61,14 @@ Future<Map<String, Uint8List>> _processImageInIsolate(
 class StorageService {
   const StorageService();
 
+  Future<bool> _hasUsableThumbnail(DiaryAttachment attachment) async {
+    final thumbPath = attachment.thumbnailPath.trim();
+    if (thumbPath.isEmpty) {
+      return false;
+    }
+    return File(thumbPath).exists();
+  }
+
   Future<Directory> _mediaDir() async {
     final dir = await getApplicationDocumentsDirectory();
     final media = Directory(p.join(dir.path, 'media'));
@@ -330,6 +338,12 @@ class StorageService {
       for (final attachment in entry.attachments) {
         if (attachment.remotePath.trim().isEmpty ||
             attachment.path.trim().isEmpty) {
+          continue;
+        }
+        // Keep local image file when there is no usable thumbnail,
+        // otherwise entry cards can lose preview after cache cleanup.
+        if (attachment.isVisualImage &&
+            !await _hasUsableThumbnail(attachment)) {
           continue;
         }
         final file = File(attachment.path);
