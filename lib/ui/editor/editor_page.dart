@@ -621,6 +621,7 @@ class _EditorPageState extends State<EditorPage> {
                     ? tr(context, zh: '心情', en: 'Mood')
                     : _moodDescController.text.trim(),
               ),
+              showCheckmark: false,
               selected: true,
               onSelected: (_) => _openMoodSheet(),
             ),
@@ -634,6 +635,7 @@ class _EditorPageState extends State<EditorPage> {
                     ? tr(context, zh: '天气', en: 'Weather')
                     : _weatherDescController.text.trim(),
               ),
+              showCheckmark: false,
               selected: true,
               onSelected: (_) => _openWeatherSheet(),
             ),
@@ -643,6 +645,7 @@ class _EditorPageState extends State<EditorPage> {
             child: FilterChip(
               avatar: const Icon(Icons.schedule_outlined, size: 18),
               label: Text(dateText),
+              showCheckmark: false,
               selected: true,
               onSelected: (_) => _pickEventAt(),
             ),
@@ -656,6 +659,7 @@ class _EditorPageState extends State<EditorPage> {
                   )
                 : const Icon(Icons.my_location_outlined, size: 18),
             label: Text(locationText, overflow: TextOverflow.ellipsis),
+            showCheckmark: false,
             selected: true,
             onSelected: (_) => _locate(),
           ),
@@ -706,7 +710,9 @@ class _EditorPageState extends State<EditorPage> {
   }
 
   Widget _buildFloatingToolbar(double keyboardInset) {
-    final bottomInset = keyboardInset > 0 ? keyboardInset + 8.0 : 12.0;
+    // Scaffold already resizes body when keyboard appears, so don't add
+    // keyboardInset again here; keep the toolbar attached to keyboard top.
+    final bottomInset = keyboardInset > 0 ? 8.0 : 12.0;
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOut,
@@ -715,6 +721,7 @@ class _EditorPageState extends State<EditorPage> {
       bottom: bottomInset,
       child: SafeArea(
         top: false,
+        bottom: keyboardInset <= 0,
         child: Material(
           elevation: 0,
           borderRadius: BorderRadius.circular(18),
@@ -845,10 +852,6 @@ class _EditorPageState extends State<EditorPage> {
     final isSaving = _saving;
     final hasEntry = _isEditing;
     final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
-    final dateLarge = DateFormat('yyyy.MM.dd EEEE').format(_eventAt);
-    final locationLarge = _locationController.text.trim().isEmpty
-        ? tr(context, zh: '未设置地点', en: 'No location')
-        : _locationController.text.trim();
 
     return Scaffold(
       appBar: AppBar(
@@ -891,16 +894,6 @@ class _EditorPageState extends State<EditorPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          dateLarge,
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          locationLarge,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 10),
                         _buildStatusBar(),
                         const SizedBox(height: 10),
                         _buildAttachmentsStrip(),
