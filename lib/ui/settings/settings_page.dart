@@ -1,5 +1,9 @@
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
 import 'package:diary/app/app_state.dart';
 import 'package:diary/app/i18n.dart';
+import 'package:diary/data/models/diary_entry.dart';
 import 'package:diary/data/models/webdav_config.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -29,6 +33,8 @@ class SettingsPage extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
       children: [
+        const _MoodTrendCard(),
+        const SizedBox(height: 10),
         ListTile(
           leading: const Icon(Icons.cleaning_services_outlined),
           title: Text(tr(context, zh: '清理附件缓存', en: 'Clear Attachment Cache')),
@@ -132,6 +138,455 @@ class SettingsPage extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _MoodTrendCard extends StatefulWidget {
+  const _MoodTrendCard();
+
+  @override
+  State<_MoodTrendCard> createState() => _MoodTrendCardState();
+}
+
+class _MoodTrendCardState extends State<_MoodTrendCard> {
+  bool _showLineChart = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = context.watch<DiaryAppState>().entries;
+    final points = _buildMoodTrendPoints(entries, windowDays: 180);
+    final hasData = points.length >= 2;
+    final average = hasData
+        ? points.map((point) => point.score).reduce((a, b) => a + b) /
+              points.length
+        : 0.0;
+    final latest = hasData ? points.last.score : 0.0;
+    final previous = hasData ? points[points.length - 2].score : 0.0;
+    final delta = latest - previous;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.insights_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    tr(context, zh: '心情趋势', en: 'Mood Trend'),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: hasData
+                      ? () => setState(() => _showLineChart = !_showLineChart)
+                      : null,
+                  icon: Icon(
+                    _showLineChart
+                        ? Icons.bar_chart_rounded
+                        : Icons.show_chart_rounded,
+                    size: 18,
+                  ),
+                  label: Text(
+                    _showLineChart
+                        ? tr(context, zh: '柱状图', en: 'Bars')
+                        : tr(context, zh: '曲线图', en: 'Line'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              tr(
+                context,
+                zh: '近 180 天按周聚合，帮助你观察心理状态变化',
+                en: 'Weekly trend over the last 180 days to support self-care',
+              ),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            if (!hasData)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  tr(
+                    context,
+                    zh: '记录两条以上带心情的日记后，即可生成趋势图。',
+                    en: 'Add at least two diary entries with mood to generate the trend chart.',
+                  ),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              )
+            else ...[
+              SizedBox(
+                height: 190,
+                width: double.infinity,
+                child: CustomPaint(
+                  painter: _showLineChart
+                      ? _MoodLineChartPainter(
+                          points: points,
+                          color: Theme.of(context).colorScheme.primary,
+                          axisColor: Theme.of(
+                            context,
+                          ).colorScheme.outlineVariant,
+                          labelColor: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant,
+                        )
+                      : _MoodBarChartPainter(
+                          points: points,
+                          color: Theme.of(context).colorScheme.primary,
+                          axisColor: Theme.of(
+                            context,
+                          ).colorScheme.outlineVariant,
+                          labelColor: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant,
+                        ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildStatChip(
+                    context,
+                    tr(context, zh: '周平均', en: 'Avg'),
+                    average.toStringAsFixed(1),
+                    Icons.favorite_outline,
+                  ),
+                  _buildStatChip(
+                    context,
+                    tr(context, zh: '最新', en: 'Latest'),
+                    latest.toStringAsFixed(1),
+                    Icons.today_outlined,
+                  ),
+                  _buildStatChip(
+                    context,
+                    tr(context, zh: '变化', en: 'Change'),
+                    '${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(1)}',
+                    delta >= 0
+                        ? Icons.trending_up_rounded
+                        : Icons.trending_down_rounded,
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatChip(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 6),
+          Text('$label $value', style: Theme.of(context).textTheme.labelLarge),
+        ],
+      ),
+    );
+  }
+}
+
+class _MoodTrendPoint {
+  const _MoodTrendPoint({
+    required this.start,
+    required this.score,
+    required this.count,
+  });
+
+  final DateTime start;
+  final double score;
+  final int count;
+}
+
+List<_MoodTrendPoint> _buildMoodTrendPoints(
+  List<DiaryEntry> entries, {
+  int windowDays = 180,
+}) {
+  final now = DateTime.now();
+  final start = DateTime(
+    now.year,
+    now.month,
+    now.day,
+  ).subtract(Duration(days: windowDays - 1));
+  final weekly = <DateTime, List<double>>{};
+  for (final entry in entries) {
+    if (entry.eventAt.isBefore(start)) {
+      continue;
+    }
+    final score = _extractMoodScore(entry.mood);
+    if (score == null) {
+      continue;
+    }
+    final bucket = _startOfWeek(entry.eventAt);
+    (weekly[bucket] ??= <double>[]).add(score);
+  }
+
+  final points = weekly.entries.map((item) {
+    final values = item.value;
+    final avg = values.reduce((a, b) => a + b) / values.length;
+    return _MoodTrendPoint(start: item.key, score: avg, count: values.length);
+  }).toList();
+  points.sort((a, b) => a.start.compareTo(b.start));
+  if (points.length > 26) {
+    return points.sublist(points.length - 26);
+  }
+  return points;
+}
+
+DateTime _startOfWeek(DateTime dateTime) {
+  final day = DateTime(dateTime.year, dateTime.month, dateTime.day);
+  return day.subtract(Duration(days: day.weekday - DateTime.monday));
+}
+
+double? _extractMoodScore(String rawMood) {
+  final mood = rawMood.trim();
+  if (mood.isEmpty) {
+    return null;
+  }
+  const moodScores = <String, double>{
+    '😞': 1.0,
+    '😐': 2.0,
+    '😌': 3.0,
+    '🙂': 4.0,
+    '😄': 5.0,
+    '🥰': 5.0,
+  };
+  for (final item in moodScores.entries) {
+    if (mood.contains(item.key)) {
+      return item.value;
+    }
+  }
+
+  final lower = mood.toLowerCase();
+  const positiveHints = ['开心', '高兴', '满足', '愉快', 'happy', 'great', 'good'];
+  for (final word in positiveHints) {
+    if (lower.contains(word)) {
+      return 4.0;
+    }
+  }
+  const negativeHints = [
+    '难过',
+    '焦虑',
+    '疲惫',
+    '烦',
+    'sad',
+    'anxious',
+    'tired',
+    'bad',
+  ];
+  for (final word in negativeHints) {
+    if (lower.contains(word)) {
+      return 2.0;
+    }
+  }
+  return 3.0;
+}
+
+class _MoodLineChartPainter extends CustomPainter {
+  const _MoodLineChartPainter({
+    required this.points,
+    required this.color,
+    required this.axisColor,
+    required this.labelColor,
+  });
+
+  final List<_MoodTrendPoint> points;
+  final Color color;
+  final Color axisColor;
+  final Color labelColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points.length < 2) {
+      return;
+    }
+    const left = 28.0;
+    const right = 12.0;
+    const top = 12.0;
+    const bottom = 24.0;
+    final width = size.width - left - right;
+    final height = size.height - top - bottom;
+    if (width <= 0 || height <= 0) {
+      return;
+    }
+
+    final gridPaint = Paint()
+      ..color = axisColor
+      ..strokeWidth = 1;
+    for (var i = 0; i <= 4; i++) {
+      final y = top + height * i / 4;
+      canvas.drawLine(
+        Offset(left, y),
+        Offset(size.width - right, y),
+        gridPaint,
+      );
+    }
+
+    final path = Path();
+    for (var i = 0; i < points.length; i++) {
+      final x = left + width * i / (points.length - 1);
+      final y = top + (5 - points[i].score).clamp(0, 4) / 4 * height;
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+
+    final linePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..strokeWidth = 2.5;
+    canvas.drawPath(path, linePaint);
+
+    final dotPaint = Paint()..color = color;
+    for (var i = 0; i < points.length; i++) {
+      final x = left + width * i / (points.length - 1);
+      final y = top + (5 - points[i].score).clamp(0, 4) / 4 * height;
+      canvas.drawCircle(Offset(x, y), 2.5, dotPaint);
+    }
+
+    _drawDateLabels(canvas, size, points.first.start, points.last.start);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MoodLineChartPainter oldDelegate) {
+    return oldDelegate.points != points ||
+        oldDelegate.color != color ||
+        oldDelegate.axisColor != axisColor ||
+        oldDelegate.labelColor != labelColor;
+  }
+
+  void _drawDateLabels(Canvas canvas, Size size, DateTime start, DateTime end) {
+    final style = TextStyle(color: labelColor, fontSize: 11);
+    final startPainter = TextPainter(
+      text: TextSpan(text: DateFormat('M/d').format(start), style: style),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+    startPainter.paint(canvas, Offset(6, size.height - 18));
+
+    final endPainter = TextPainter(
+      text: TextSpan(text: DateFormat('M/d').format(end), style: style),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+    endPainter.paint(
+      canvas,
+      Offset(size.width - endPainter.width - 6, size.height - 18),
+    );
+  }
+}
+
+class _MoodBarChartPainter extends CustomPainter {
+  const _MoodBarChartPainter({
+    required this.points,
+    required this.color,
+    required this.axisColor,
+    required this.labelColor,
+  });
+
+  final List<_MoodTrendPoint> points;
+  final Color color;
+  final Color axisColor;
+  final Color labelColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points.length < 2) {
+      return;
+    }
+    const left = 28.0;
+    const right = 12.0;
+    const top = 12.0;
+    const bottom = 24.0;
+    final width = size.width - left - right;
+    final height = size.height - top - bottom;
+    if (width <= 0 || height <= 0) {
+      return;
+    }
+
+    final gridPaint = Paint()
+      ..color = axisColor
+      ..strokeWidth = 1;
+    for (var i = 0; i <= 4; i++) {
+      final y = top + height * i / 4;
+      canvas.drawLine(
+        Offset(left, y),
+        Offset(size.width - right, y),
+        gridPaint,
+      );
+    }
+
+    final barGap = 5.0;
+    final barWidth = math.max(
+      2.0,
+      (width - (points.length - 1) * barGap) / points.length,
+    );
+    final paint = Paint()..color = color.withValues(alpha: 0.82);
+    var x = left;
+    for (final point in points) {
+      final barHeight = ((point.score - 1).clamp(0, 4) / 4) * height;
+      final topY = top + height - barHeight;
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(x, topY, barWidth, barHeight),
+        const Radius.circular(5),
+      );
+      canvas.drawRRect(rect, paint);
+      x += barWidth + barGap;
+    }
+
+    _drawDateLabels(canvas, size, points.first.start, points.last.start);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MoodBarChartPainter oldDelegate) {
+    return oldDelegate.points != points ||
+        oldDelegate.color != color ||
+        oldDelegate.axisColor != axisColor ||
+        oldDelegate.labelColor != labelColor;
+  }
+
+  void _drawDateLabels(Canvas canvas, Size size, DateTime start, DateTime end) {
+    final style = TextStyle(color: labelColor, fontSize: 11);
+    final startPainter = TextPainter(
+      text: TextSpan(text: DateFormat('M/d').format(start), style: style),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+    startPainter.paint(canvas, Offset(6, size.height - 18));
+
+    final endPainter = TextPainter(
+      text: TextSpan(text: DateFormat('M/d').format(end), style: style),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+    endPainter.paint(
+      canvas,
+      Offset(size.width - endPainter.width - 6, size.height - 18),
     );
   }
 }
