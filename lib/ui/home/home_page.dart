@@ -36,7 +36,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   static const _minGridCardWidth = 180.0;
   static const _maxGridColumns = 7;
-  static const _gridSpacing = 10.0;
+  static const _gridSpacing = 8.0;
   final ScrollController _scrollController = ScrollController();
   late int _handledScrollToTopSignal;
 
@@ -156,7 +156,7 @@ class _HomePageState extends State<HomePage> {
         final columns = _dynamicColumnCount(constraints.maxWidth);
         return MasonryGridView.builder(
           controller: _scrollController,
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 120),
+          padding: EdgeInsets.fromLTRB(_gridSpacing, 10, _gridSpacing, 120),
           gridDelegate: SliverSimpleGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: columns,
           ),
