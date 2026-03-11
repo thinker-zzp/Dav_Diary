@@ -37,8 +37,8 @@ class _EditorPageState extends State<EditorPage> {
 
   late QuillController _quillController;
 
-  String _selectedMood = _moodOptions.first;
-  String _selectedWeather = _weatherOptions.first;
+  String _selectedMood = '';
+  String _selectedWeather = '';
   DateTime _eventAt = DateTime.now();
   bool _saving = false;
   bool _locating = false;
@@ -59,11 +59,11 @@ class _EditorPageState extends State<EditorPage> {
     _locationController.text = initial.location;
     _attachments = List<DiaryAttachment>.from(initial.attachments);
 
-    final moodParsed = _splitMeta(initial.mood, _moodOptions.first);
+    final moodParsed = _splitMeta(initial.mood, _moodOptions);
     _selectedMood = moodParsed.$1;
     _moodDescController.text = moodParsed.$2;
 
-    final weatherParsed = _splitMeta(initial.weather, _weatherOptions.first);
+    final weatherParsed = _splitMeta(initial.weather, _weatherOptions);
     _selectedWeather = weatherParsed.$1;
     _weatherDescController.text = weatherParsed.$2;
 
@@ -90,22 +90,32 @@ class _EditorPageState extends State<EditorPage> {
     super.dispose();
   }
 
-  (String, String) _splitMeta(String value, String fallbackIcon) {
+  (String, String) _splitMeta(String value, List<String> options) {
     final trimmed = value.trim();
     if (trimmed.isEmpty) {
-      return (fallbackIcon, '');
+      return ('', '');
     }
-    for (final icon in [..._moodOptions, ..._weatherOptions]) {
+    for (final icon in options) {
       if (trimmed.startsWith(icon)) {
         return (icon, trimmed.substring(icon.length).trim());
       }
     }
-    return (fallbackIcon, trimmed);
+    return ('', trimmed);
   }
 
   String _joinMeta(String icon, String desc) {
+    final symbol = icon.trim();
     final text = desc.trim();
-    return text.isEmpty ? icon : '$icon $text';
+    if (symbol.isEmpty && text.isEmpty) {
+      return '';
+    }
+    if (symbol.isEmpty) {
+      return text;
+    }
+    if (text.isEmpty) {
+      return symbol;
+    }
+    return '$symbol $text';
   }
 
   Future<void> _pickEventAt() async {
@@ -670,7 +680,9 @@ class _EditorPageState extends State<EditorPage> {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
-              avatar: Text(_selectedMood),
+              avatar: _selectedMood.isEmpty
+                  ? const Icon(Icons.mood_outlined, size: 18)
+                  : Text(_selectedMood),
               label: Text(
                 _moodDescController.text.trim().isEmpty
                     ? tr(context, zh: '心情', en: 'Mood')
@@ -684,7 +696,9 @@ class _EditorPageState extends State<EditorPage> {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
-              avatar: Text(_selectedWeather),
+              avatar: _selectedWeather.isEmpty
+                  ? const Icon(Icons.cloud_outlined, size: 18)
+                  : Text(_selectedWeather),
               label: Text(
                 _weatherDescController.text.trim().isEmpty
                     ? tr(context, zh: '天气', en: 'Weather')

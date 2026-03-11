@@ -104,7 +104,9 @@ class _CalendarPageState extends State<CalendarPage> {
                           subtitle: Text(
                             DateFormat('HH:mm').format(entry.eventAt),
                           ),
-                          trailing: Text(entry.mood),
+                          trailing: entry.mood.trim().isEmpty
+                              ? null
+                              : Text(entry.mood),
                           onTap: () => widget.onOpen(entry),
                         );
                       },

@@ -15,6 +15,9 @@ class EntryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final imagePath = entry.firstImagePath;
     final dateText = DateFormat('MM-dd HH:mm').format(entry.eventAt);
+    final metaText = [entry.mood.trim(), entry.weather.trim()]
+        .where((value) => value.isNotEmpty)
+        .join('  ');
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -40,14 +43,14 @@ class EntryCard extends StatelessWidget {
                   },
                 ),
               )
-            else
+            else if (metaText.isNotEmpty)
               Container(
                 height: 90,
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '${entry.mood}  ${entry.weather}',
+                  metaText,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),

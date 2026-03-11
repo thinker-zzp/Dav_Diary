@@ -393,6 +393,9 @@ class _MasonryEntryCard extends StatelessWidget {
     final summary = entry.summary;
     final hasBodyText = summary.isNotEmpty;
     final lineCount = hasBodyText ? _textLineCount(summary) : 0;
+    final metaText = [entry.mood.trim(), entry.weather.trim()]
+        .where((value) => value.isNotEmpty)
+        .join('  ');
 
     return Card(
       color: Theme.of(context).colorScheme.surfaceContainerLow,
@@ -415,7 +418,7 @@ class _MasonryEntryCard extends StatelessWidget {
                   ),
                 ),
               )
-            else
+            else if (metaText.isNotEmpty)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
@@ -423,7 +426,7 @@ class _MasonryEntryCard extends StatelessWidget {
                   context,
                 ).colorScheme.secondaryContainer.withValues(alpha: 0.55),
                 child: Text(
-                  '${entry.mood}  ${entry.weather}',
+                  metaText,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleSmall,

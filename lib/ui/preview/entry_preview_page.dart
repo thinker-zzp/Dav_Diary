@@ -305,18 +305,22 @@ class _EntryPreviewPageState extends State<EntryPreviewPage> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                Chip(
-                  label: Text(tr(context, zh: '心情 ${_entry.mood}', en: 'Mood ${_entry.mood}')),
-                ),
-                Chip(
-                  label: Text(
-                    tr(
-                      context,
-                      zh: '天气 ${_entry.weather}',
-                      en: 'Weather ${_entry.weather}',
+                if (_entry.mood.trim().isNotEmpty)
+                  Chip(
+                    label: Text(
+                      tr(context, zh: '心情 ${_entry.mood}', en: 'Mood ${_entry.mood}'),
                     ),
                   ),
-                ),
+                if (_entry.weather.trim().isNotEmpty)
+                  Chip(
+                    label: Text(
+                      tr(
+                        context,
+                        zh: '天气 ${_entry.weather}',
+                        en: 'Weather ${_entry.weather}',
+                      ),
+                    ),
+                  ),
                 Chip(
                   label: Text(tr(context, zh: '时间 $dateText', en: 'Time $dateText')),
                 ),
