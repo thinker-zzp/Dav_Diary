@@ -4,6 +4,9 @@ import 'package:diary/data/models/diary_entry.dart';
 import 'package:diary/ui/calendar/calendar_page.dart';
 import 'package:diary/ui/editor/editor_page.dart';
 import 'package:diary/ui/home/home_page.dart';
+import 'package:diary/ui/motion/motion_dialog.dart';
+import 'package:diary/ui/motion/motion_route.dart';
+import 'package:diary/ui/motion/motion_spec.dart';
 import 'package:diary/ui/preview/entry_preview_page.dart';
 import 'package:diary/ui/settings/settings_page.dart';
 import 'package:flutter/material.dart';
@@ -25,9 +28,9 @@ class _HomeShellState extends State<HomeShell> {
   int _homeScrollToTopSignal = 0;
 
   Future<void> _openEditor([DiaryEntry? entry]) async {
-    await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (context) => EditorPage(initialEntry: entry)),
-    );
+    await Navigator.of(
+      context,
+    ).push<bool>(buildPageTransitionRoute(EditorPage(initialEntry: entry)));
     if (!mounted) {
       return;
     }
@@ -35,9 +38,9 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Future<void> _openPreview(DiaryEntry entry) async {
-    await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (context) => EntryPreviewPage(entry: entry)),
-    );
+    await Navigator.of(
+      context,
+    ).push<bool>(buildCardExpandPreviewRoute(EntryPreviewPage(entry: entry)));
     if (!mounted) {
       return;
     }
@@ -46,7 +49,7 @@ class _HomeShellState extends State<HomeShell> {
 
   Future<void> _openHomeSearchDialog() async {
     final controller = TextEditingController(text: _homeQuery);
-    final result = await showDialog<String>(
+    final result = await showMotionDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(tr(context, zh: '搜索', en: 'Search')),
@@ -54,11 +57,7 @@ class _HomeShellState extends State<HomeShell> {
           controller: controller,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: tr(
-              context,
-              zh: '搜索标题或内容',
-              en: 'Search title or content',
-            ),
+            hintText: tr(context, zh: '搜索标题或内容', en: 'Search title or content'),
             prefixIcon: const Icon(Icons.search),
           ),
           onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
@@ -161,11 +160,7 @@ class _HomeShellState extends State<HomeShell> {
                     IconButton(
                       tooltip: appState.homeLayoutMode == 'timeline'
                           ? tr(context, zh: '切换到网格', en: 'Switch to grid')
-                          : tr(
-                              context,
-                              zh: '切换到时间轴',
-                              en: 'Switch to timeline',
-                            ),
+                          : tr(context, zh: '切换到时间轴', en: 'Switch to timeline'),
                       onPressed: _toggleHomeLayoutMode,
                       icon: Icon(
                         appState.homeLayoutMode == 'timeline'
@@ -240,8 +235,8 @@ class _HomeShellState extends State<HomeShell> {
                     begin: 0,
                     end: (_index == 0 && !_homeBottomBarVisible) ? 0 : 1,
                   ),
-                  duration: const Duration(milliseconds: 260),
-                  curve: Curves.easeOutCubic,
+                  duration: MotionSpec.pageTransitionDuration,
+                  curve: MotionSpec.pageTransitionCurve,
                   builder: (context, value, child) {
                     return ClipRect(
                       child: Align(
@@ -258,7 +253,7 @@ class _HomeShellState extends State<HomeShell> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 180),
+                        duration: MotionSpec.popupDuration,
                         child: appState.syncing
                             ? const SizedBox(
                                 height: 2,
@@ -266,15 +261,15 @@ class _HomeShellState extends State<HomeShell> {
                               )
                             : const SizedBox(height: 2),
                       ),
-                            NavigationBar(
-                              height: 64,
-                              selectedIndex: _index,
-                              labelBehavior:
-                                  NavigationDestinationLabelBehavior.alwaysHide,
-                              onDestinationSelected: (value) => setState(() {
-                                _index = value;
-                                if (_index != 0) {
-                                  _homeBottomBarVisible = true;
+                      NavigationBar(
+                        height: 64,
+                        selectedIndex: _index,
+                        labelBehavior:
+                            NavigationDestinationLabelBehavior.alwaysHide,
+                        onDestinationSelected: (value) => setState(() {
+                          _index = value;
+                          if (_index != 0) {
+                            _homeBottomBarVisible = true;
                             _showHomeScrollToTop = false;
                           }
                         }),

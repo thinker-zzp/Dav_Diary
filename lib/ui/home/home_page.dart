@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:diary/app/app_state.dart';
 import 'package:diary/app/i18n.dart';
 import 'package:diary/data/models/diary_entry.dart';
+import 'package:diary/ui/motion/motion_spec.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -41,9 +42,8 @@ class _HomePageState extends State<HomePage> {
   late int _handledScrollToTopSignal;
 
   int _dynamicColumnCount(double width) {
-    final rawCount = ((width + _gridSpacing) /
-            (_minGridCardWidth + _gridSpacing))
-        .floor();
+    final rawCount =
+        ((width + _gridSpacing) / (_minGridCardWidth + _gridSpacing)).floor();
     return rawCount.clamp(1, _maxGridColumns);
   }
 
@@ -68,8 +68,8 @@ class _HomePageState extends State<HomePage> {
         if (_scrollController.hasClients) {
           _scrollController.animateTo(
             0,
-            duration: const Duration(milliseconds: 260),
-            curve: Curves.easeOutCubic,
+            duration: MotionSpec.pageTransitionDuration,
+            curve: MotionSpec.pageTransitionCurve,
           );
         }
       });
@@ -77,8 +77,8 @@ class _HomePageState extends State<HomePage> {
     }
     await _scrollController.animateTo(
       0,
-      duration: const Duration(milliseconds: 260),
-      curve: Curves.easeOutCubic,
+      duration: MotionSpec.pageTransitionDuration,
+      curve: MotionSpec.pageTransitionCurve,
     );
   }
 
@@ -327,7 +327,9 @@ class _TimelineEntryCard extends StatelessWidget {
                   File(imagePath),
                   fit: BoxFit.cover,
                   errorBuilder: (context, _, _) => Container(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     child: const Icon(Icons.broken_image_outlined),
                   ),
                 ),
@@ -393,9 +395,10 @@ class _MasonryEntryCard extends StatelessWidget {
     final summary = entry.summary;
     final hasBodyText = summary.isNotEmpty;
     final lineCount = hasBodyText ? _textLineCount(summary) : 0;
-    final metaText = [entry.mood.trim(), entry.weather.trim()]
-        .where((value) => value.isNotEmpty)
-        .join('  ');
+    final metaText = [
+      entry.mood.trim(),
+      entry.weather.trim(),
+    ].where((value) => value.isNotEmpty).join('  ');
 
     return Card(
       color: Theme.of(context).colorScheme.surfaceContainerLow,
@@ -413,7 +416,9 @@ class _MasonryEntryCard extends StatelessWidget {
                   File(imagePath),
                   fit: BoxFit.cover,
                   errorBuilder: (context, _, _) => Container(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     child: const Icon(Icons.broken_image_outlined),
                   ),
                 ),

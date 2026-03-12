@@ -6,6 +6,10 @@ import 'package:diary/app/i18n.dart';
 import 'package:diary/data/models/diary_entry.dart';
 import 'package:diary/services/storage_service.dart';
 import 'package:diary/ui/editor/doodle_page.dart';
+import 'package:diary/ui/motion/motion_dialog.dart';
+import 'package:diary/ui/motion/motion_route.dart';
+import 'package:diary/ui/motion/motion_spec.dart';
+import 'package:diary/ui/motion/pressable_scale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -177,9 +181,9 @@ class _EditorPageState extends State<EditorPage> {
   }
 
   Future<void> _addDoodle() async {
-    final attachment = await Navigator.of(context).push<DiaryAttachment>(
-      MaterialPageRoute(builder: (context) => const DoodlePage()),
-    );
+    final attachment = await Navigator.of(
+      context,
+    ).push<DiaryAttachment>(buildPageTransitionRoute(const DoodlePage()));
     if (attachment == null) {
       return;
     }
@@ -191,7 +195,7 @@ class _EditorPageState extends State<EditorPage> {
   Future<void> _editCaption(int index) async {
     final current = _attachments[index];
     final controller = TextEditingController(text: current.caption);
-    final result = await showDialog<String>(
+    final result = await showMotionDialog<String>(
       context: context,
       builder: (context) {
         return AlertDialog(
@@ -269,7 +273,7 @@ class _EditorPageState extends State<EditorPage> {
   }
 
   Future<void> _removeAttachment(int index) async {
-    final confirm = await showDialog<bool>(
+    final confirm = await showMotionDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
@@ -450,7 +454,9 @@ class _EditorPageState extends State<EditorPage> {
 
   Future<void> _openMoodSheet() async {
     var selectedMood = _selectedMood;
-    final descController = TextEditingController(text: _moodDescController.text);
+    final descController = TextEditingController(
+      text: _moodDescController.text,
+    );
     final saved = await showModalBottomSheet<bool>(
       context: context,
       showDragHandle: true,
@@ -613,13 +619,15 @@ class _EditorPageState extends State<EditorPage> {
     bool active = false,
   }) {
     final color = active ? Theme.of(context).colorScheme.primary : null;
-    return IconButton(
-      tooltip: tooltip,
-      onPressed: () {
-        HapticFeedback.lightImpact();
-        onTap();
-      },
-      icon: Icon(icon, color: color),
+    return PressableScale(
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        icon: Icon(icon, color: color),
+      ),
     );
   }
 
@@ -739,8 +747,8 @@ class _EditorPageState extends State<EditorPage> {
     // keyboardInset again here; keep the toolbar attached to keyboard top.
     final bottomInset = keyboardInset > 0 ? 8.0 : 12.0;
     return AnimatedPositioned(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
+      duration: MotionSpec.popupDuration,
+      curve: MotionSpec.popupCurve,
       left: 10,
       right: 10,
       bottom: bottomInset,

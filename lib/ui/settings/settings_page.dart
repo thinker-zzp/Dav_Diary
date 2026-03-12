@@ -5,6 +5,9 @@ import 'package:diary/app/app_state.dart';
 import 'package:diary/app/i18n.dart';
 import 'package:diary/data/models/diary_entry.dart';
 import 'package:diary/data/models/webdav_config.dart';
+import 'package:diary/ui/motion/motion_dialog.dart';
+import 'package:diary/ui/motion/motion_route.dart';
+import 'package:diary/ui/motion/motion_spec.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -46,7 +49,7 @@ class SettingsPage extends StatelessWidget {
             ),
           ),
           onTap: () async {
-            final confirmed = await showDialog<bool>(
+            final confirmed = await showMotionDialog<bool>(
               context: context,
               builder: (context) {
                 return AlertDialog(
@@ -99,9 +102,9 @@ class SettingsPage extends StatelessWidget {
           title: Text(tr(context, zh: 'WebDAV 设置', en: 'WebDAV')),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const WebDavSettingsPage()),
-            );
+            Navigator.of(
+              context,
+            ).push(buildPageTransitionRoute(const WebDavSettingsPage()));
           },
         ),
         const Divider(height: 1),
@@ -110,9 +113,9 @@ class SettingsPage extends StatelessWidget {
           title: Text(tr(context, zh: '外观', en: 'Appearance')),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AppearanceSettingsPage()),
-            );
+            Navigator.of(
+              context,
+            ).push(buildPageTransitionRoute(const AppearanceSettingsPage()));
           },
         ),
         const Divider(height: 1),
@@ -728,7 +731,8 @@ class _ThemeSeedColorOption extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
+        duration: MotionSpec.clickDuration,
+        curve: MotionSpec.clickCurve,
         width: 38,
         height: 38,
         decoration: BoxDecoration(

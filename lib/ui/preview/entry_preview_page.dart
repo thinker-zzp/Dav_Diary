@@ -6,6 +6,8 @@ import 'package:diary/app/i18n.dart';
 import 'package:diary/data/models/diary_entry.dart';
 import 'package:diary/services/storage_service.dart';
 import 'package:diary/ui/editor/editor_page.dart';
+import 'package:diary/ui/motion/motion_dialog.dart';
+import 'package:diary/ui/motion/motion_route.dart';
 import 'package:diary/ui/preview/attachment_preview_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -55,9 +57,9 @@ class _EntryPreviewPageState extends State<EntryPreviewPage> {
   }
 
   Future<void> _editEntry() async {
-    final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (context) => EditorPage(initialEntry: _entry)),
-    );
+    final changed = await Navigator.of(
+      context,
+    ).push<bool>(buildPageTransitionRoute(EditorPage(initialEntry: _entry)));
     if (changed != true || !mounted) {
       return;
     }
@@ -81,7 +83,7 @@ class _EntryPreviewPageState extends State<EntryPreviewPage> {
     if (_deleting) {
       return;
     }
-    final confirm = await showDialog<bool>(
+    final confirm = await showMotionDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
@@ -112,7 +114,9 @@ class _EntryPreviewPageState extends State<EntryPreviewPage> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(tr(context, zh: '日记已删除', en: 'Deleted'))),
+      SnackBar(
+        content: Text(tr(context, zh: '日记已删除', en: 'Deleted')),
+      ),
     );
     Navigator.of(context).pop(true);
   }
@@ -136,9 +140,8 @@ class _EntryPreviewPageState extends State<EntryPreviewPage> {
       return;
     }
     await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (context) =>
-            AttachmentPreviewPage(attachment: resolvedAttachment!),
+      buildPageTransitionRoute(
+        AttachmentPreviewPage(attachment: resolvedAttachment!),
       ),
     );
   }
@@ -360,7 +363,11 @@ class _EntryPreviewPageState extends State<EntryPreviewPage> {
                 if (_entry.mood.trim().isNotEmpty)
                   Chip(
                     label: Text(
-                      tr(context, zh: '心情 ${_entry.mood}', en: 'Mood ${_entry.mood}'),
+                      tr(
+                        context,
+                        zh: '心情 ${_entry.mood}',
+                        en: 'Mood ${_entry.mood}',
+                      ),
                     ),
                   ),
                 if (_entry.weather.trim().isNotEmpty)
@@ -374,11 +381,17 @@ class _EntryPreviewPageState extends State<EntryPreviewPage> {
                     ),
                   ),
                 Chip(
-                  label: Text(tr(context, zh: '时间 $dateText', en: 'Time $dateText')),
+                  label: Text(
+                    tr(context, zh: '时间 $dateText', en: 'Time $dateText'),
+                  ),
                 ),
                 Chip(
                   label: Text(
-                    tr(context, zh: '位置 $locationText', en: 'Location $locationText'),
+                    tr(
+                      context,
+                      zh: '位置 $locationText',
+                      en: 'Location $locationText',
+                    ),
                   ),
                 ),
               ],

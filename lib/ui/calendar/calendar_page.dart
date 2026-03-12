@@ -1,6 +1,7 @@
 import 'package:diary/app/app_state.dart';
 import 'package:diary/app/i18n.dart';
 import 'package:diary/data/models/diary_entry.dart';
+import 'package:diary/ui/motion/motion_spec.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -48,7 +49,9 @@ class _CalendarPageState extends State<CalendarPage> {
       return 0;
     }
     final countScore = maxCount <= 0 ? 0.0 : stat.count / maxCount;
-    final textScore = maxTextLength <= 0 ? 0.0 : stat.textLength / maxTextLength;
+    final textScore = maxTextLength <= 0
+        ? 0.0
+        : stat.textLength / maxTextLength;
     return countScore > textScore ? countScore : textScore;
   }
 
@@ -88,7 +91,8 @@ class _CalendarPageState extends State<CalendarPage> {
 
     return Center(
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: MotionSpec.clickDuration,
+        curve: MotionSpec.clickCurve,
         width: 36,
         height: 36,
         alignment: Alignment.center,
