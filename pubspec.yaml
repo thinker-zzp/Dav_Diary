@@ -113,5 +113,5 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/images/icon.png" # 确保此路径下有图标文件
+  image_path: "assets/images/icon.png" # 纭繚姝よ矾寰勪笅鏈夊浘鏍囨枃浠?
 
