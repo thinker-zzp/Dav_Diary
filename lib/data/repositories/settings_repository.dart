@@ -21,6 +21,7 @@ class SettingsRepository {
   static const _keyEnableDailyQuote = 'enable_daily_quote';
   static const _keyDailyQuoteText = 'daily_quote_text';
   static const _keyDailyQuoteDay = 'daily_quote_day';
+  static const _keyPendingHardDeleteIds = 'pending_hard_delete_ids';
 
   Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
 
@@ -150,5 +151,40 @@ class SettingsRepository {
     final prefs = await _prefs;
     await prefs.setString(_keyDailyQuoteText, text.trim());
     await prefs.setInt(_keyDailyQuoteDay, dayStartEpochMs);
+  }
+
+  Future<List<String>> loadPendingHardDeleteIds() async {
+    final prefs = await _prefs;
+    final raw = (prefs.getString(_keyPendingHardDeleteIds) ?? '').trim();
+    if (raw.isEmpty) {
+      return const [];
+    }
+    try {
+      final parsed = jsonDecode(raw);
+      if (parsed is! List<dynamic>) {
+        return const [];
+      }
+      return parsed
+          .whereType<String>()
+          .map((id) => id.trim())
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> savePendingHardDeleteIds(List<String> ids) async {
+    final normalized =
+        ids.map((id) => id.trim()).where((id) => id.isNotEmpty).toSet().toList()
+          ..sort();
+    final prefs = await _prefs;
+    if (normalized.isEmpty) {
+      await prefs.remove(_keyPendingHardDeleteIds);
+      return;
+    }
+    await prefs.setString(_keyPendingHardDeleteIds, jsonEncode(normalized));
   }
 }

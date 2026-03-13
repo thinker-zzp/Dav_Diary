@@ -130,15 +130,25 @@ class DiaryAppState extends ChangeNotifier {
   }
 
   Future<void> deleteEntryForever(String id) async {
+    await _syncService.markEntryHardDeleted(id);
     await _diaryRepository.deleteForever(id);
     await refreshEntries();
     await _storageService.cleanupOrphanedMedia(_entries);
+    _triggerAutoSyncAfterLocalChange();
   }
 
   Future<int> clearDeletedEntries() async {
+    final deletedEntries = await _diaryRepository.listDeleted();
+    final deletedIds = deletedEntries.map((entry) => entry.id).toList();
+    if (deletedIds.isNotEmpty) {
+      await _syncService.markEntriesHardDeleted(deletedIds);
+    }
     final removed = await _diaryRepository.clearDeleted();
     await refreshEntries();
     await _storageService.cleanupOrphanedMedia(_entries);
+    if (removed > 0) {
+      _triggerAutoSyncAfterLocalChange();
+    }
     return removed;
   }
 

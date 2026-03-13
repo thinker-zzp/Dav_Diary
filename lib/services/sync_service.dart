@@ -93,6 +93,22 @@ class SyncService {
   String _attachmentDir(String root) => '$root/attachments';
   String _manifestPath(String root) => '$root/manifest.json';
 
+  Future<void> markEntryHardDeleted(String id) async {
+    await markEntriesHardDeleted([id]);
+  }
+
+  Future<void> markEntriesHardDeleted(List<String> ids) async {
+    final existing = await _settingsRepository.loadPendingHardDeleteIds();
+    final merged = {...existing};
+    for (final id in ids) {
+      final normalized = id.trim();
+      if (normalized.isNotEmpty) {
+        merged.add(normalized);
+      }
+    }
+    await _settingsRepository.savePendingHardDeleteIds(merged.toList());
+  }
+
   Future<bool> _needsAttachmentHydration(DiaryEntry? localEntry) async {
     if (localEntry == null) {
       return false;
@@ -105,8 +121,7 @@ class SyncService {
       }
 
       final localPath = attachment.path.trim();
-      final mainMissing =
-          localPath.isEmpty || !await File(localPath).exists();
+      final mainMissing = localPath.isEmpty || !await File(localPath).exists();
       if (mainMissing && hasRemoteMain) {
         return true;
       }
@@ -115,8 +130,7 @@ class SyncService {
         continue;
       }
       final thumbPath = attachment.thumbnailPath.trim();
-      final thumbMissing =
-          thumbPath.isEmpty || !await File(thumbPath).exists();
+      final thumbMissing = thumbPath.isEmpty || !await File(thumbPath).exists();
       if (thumbMissing && hasRemoteThumb) {
         return true;
       }
@@ -332,6 +346,29 @@ class SyncService {
     return result;
   }
 
+  Future<void> _reconcileEntriesMissingFromManifest(
+    Map<String, _ManifestItem> manifest,
+    DateTime lastSync,
+  ) async {
+    final remoteIds = manifest.keys.toSet();
+    final localHeads = await _diaryRepository.listSyncHeads();
+    for (final localId in localHeads.keys) {
+      if (remoteIds.contains(localId)) {
+        continue;
+      }
+      final localEntry = await _diaryRepository.getById(localId);
+      if (localEntry == null) {
+        continue;
+      }
+      // Preserve unsynced local edits; only prune entries that are confirmed
+      // stale against the current manifest snapshot.
+      if (localEntry.updatedAt.isAfter(lastSync)) {
+        continue;
+      }
+      await _diaryRepository.deleteForever(localId);
+    }
+  }
+
   Future<bool> testConnection() async {
     final config = await _settingsRepository.loadWebDavConfig();
     if (!config.isConfigured) {
@@ -410,6 +447,16 @@ class SyncService {
       await client.mkdirAll('${_attachmentDir(remoteRoot)}/thumbs');
 
       final manifest = await _loadManifest(client, remoteRoot);
+      final pendingHardDeleteIds = await _settingsRepository
+          .loadPendingHardDeleteIds();
+      final processedHardDeleteIds = <String>[];
+      for (final id in pendingHardDeleteIds) {
+        final removed = manifest.remove(id);
+        if (removed != null) {
+          await client.remove(removed.path);
+        }
+        processedHardDeleteIds.add(id);
+      }
 
       final changedEntries = await _diaryRepository.listUpdatedAfter(lastSync);
       for (final entry in changedEntries) {
@@ -462,7 +509,13 @@ class SyncService {
         downloaded++;
       }
 
+      await _reconcileEntriesMissingFromManifest(manifest, lastSync);
       await _saveManifest(client, remoteRoot, manifest);
+      if (processedHardDeleteIds.isNotEmpty) {
+        final pendingSet = pendingHardDeleteIds.toSet()
+          ..removeAll(processedHardDeleteIds);
+        await _settingsRepository.savePendingHardDeleteIds(pendingSet.toList());
+      }
       await _settingsRepository.saveLastSyncAt(now);
       return SyncResult(
         success: true,
